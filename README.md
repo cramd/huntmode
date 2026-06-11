@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HuntMode — Job Search Assistant
 
-## Getting Started
+Your ADHD-friendly job search command center. Track applications, generate AI-tailored CVs and cover letters, and stay motivated with goals and streak tracking.
 
-First, run the development server:
+## Features
+
+- **AI Document Generation** — Paste a job URL, and get a tailored CV and cover letter in seconds (OpenAI GPT-4o or Claude)
+- **Application Tracker** — Track every application with status, notes, and links to generated documents
+- **Goals & Streaks** — Daily checklists, streak calendar (GitHub-style heatmap), and motivational milestones
+- **Dashboard** — Application funnel, weekly progress ring, activity chart, and recent applications
+- **Master Resume** — Store multiple resume variants; the AI adapts the right one per role
+
+## Setup
+
+### 1. Firebase Project
+
+1. Go to [console.firebase.google.com](https://console.firebase.google.com) and create a new project
+2. Enable **Authentication** → Google sign-in provider
+3. Enable **Firestore** (start in production mode)
+4. Enable **Storage**
+5. Go to **Project Settings → Your Apps** → Add a Web App → copy the config
+
+### 2. Environment Variables
+
+Copy `.env.local` and fill in your values:
+
+```bash
+# Firebase Web Config
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+
+# Firebase Admin (for API routes)
+# Firebase Console → Project Settings → Service Accounts → Generate new private key
+FIREBASE_ADMIN_CLIENT_EMAIL=
+FIREBASE_ADMIN_PRIVATE_KEY=
+
+# AI Provider (add key for your chosen provider)
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+```
+
+### 3. Deploy Firestore Rules
+
+```bash
+npx firebase-tools@latest login
+npx firebase-tools@latest use --add <YOUR_PROJECT_ID>
+npx firebase-tools@latest deploy --only firestore:rules
+```
+
+### 4. Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Next.js 15** (App Router)
+- **Firebase** (Auth, Firestore, Storage)
+- **Vercel AI SDK** — provider-agnostic (OpenAI or Anthropic)
+- **Tailwind CSS + shadcn/ui**
+- **Recharts**
+- **TypeScript**
 
-## Learn More
+## AI Provider
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Configure in **Settings** inside the app, or via environment variables. Supports:
+- OpenAI GPT-4o (`OPENAI_API_KEY`)
+- Anthropic Claude 3.5 Sonnet (`ANTHROPIC_API_KEY`)
