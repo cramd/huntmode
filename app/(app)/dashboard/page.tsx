@@ -195,149 +195,118 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+    <div className="p-6 max-w-7xl mx-auto space-y-4">
+      {/* Header — compact */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">
+          <h1 className="text-2xl font-bold text-foreground">
             Welcome back, {user?.displayName?.split(" ")[0] || "Hunter"} 👋
           </h1>
-          <p className="mt-1 text-muted-foreground italic">&ldquo;{motivationalMsg}&rdquo;</p>
+          <p className="text-xs text-muted-foreground italic mt-0.5">&ldquo;{motivationalMsg}&rdquo;</p>
         </div>
-        <Link href="/applications/new" className={buttonVariants()}>
-          <Plus className="w-4 h-4 mr-2" />
+        <Link href="/applications/new" className={buttonVariants({ size: "sm" })}>
+          <Plus className="w-3.5 h-3.5 mr-1.5" />
           New Application
         </Link>
       </div>
 
-      {/* Streak + Weekly Goal Hero */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Streak */}
-        <Card className="border-0 bg-gradient-to-br from-primary/90 to-primary text-primary-foreground overflow-hidden relative">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-primary-foreground/70 text-sm font-medium">Current Streak</p>
-                <div className="flex items-end gap-2 mt-1">
-                  <span className="text-5xl font-black">{streak}</span>
-                  <span className="text-xl font-bold mb-1">days</span>
-                </div>
-                <p className="text-primary-foreground/70 text-sm mt-1">
-                  {streak === 0
-                    ? "Start today — apply to 1 job!"
-                    : streak < 7
-                    ? "Building momentum! Keep going."
-                    : streak < 30
-                    ? "On fire! You're unstoppable."
-                    : "Legendary dedication. You're a machine."}
-                </p>
+      {/* Top row: Stats + Streak + Weekly Goal — all in one row */}
+      <div className="grid grid-cols-6 gap-3">
+        {/* 4 stat cards */}
+        {[
+          { label: "Total", value: stats.total, icon: Briefcase, color: "text-blue-500" },
+          { label: "Active", value: stats.active, icon: TrendingUp, color: "text-violet-500" },
+          { label: "Offers", value: stats.offers, icon: Trophy, color: "text-emerald-500" },
+          { label: "Response", value: `${stats.responseRate}%`, icon: Zap, color: "text-amber-500" },
+        ].map(({ label, value, icon: Icon, color }) => (
+          <Card key={label}>
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "var(--muted)" }}>
+                <Icon className={`w-4 h-4 ${color}`} />
               </div>
-              <div className="w-20 h-20 rounded-2xl bg-white/10 flex items-center justify-center">
-                <Flame className="w-12 h-12 text-amber-300" />
+              <div>
+                <p className="text-lg font-bold text-foreground leading-none">{value}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {/* Streak — compact */}
+        <Card className="border-0 bg-gradient-to-br from-primary/90 to-primary text-primary-foreground">
+          <CardContent className="p-3 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-primary-foreground/60 font-medium uppercase tracking-wider">Streak</p>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-black">{streak}</span>
+                <span className="text-xs font-semibold opacity-70">days</span>
               </div>
             </div>
-            {profile?.longestStreak && profile.longestStreak > 0 && (
-              <p className="mt-4 text-xs text-primary-foreground/50 flex items-center gap-1">
-                <Trophy className="w-3.5 h-3.5" />
-                Best streak: {profile.longestStreak} days
-              </p>
-            )}
+            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+              <Flame className="w-5 h-5 text-amber-300" />
+            </div>
           </CardContent>
         </Card>
 
-        {/* Weekly Goal */}
+        {/* Weekly Goal — compact */}
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-muted-foreground text-sm font-medium">Weekly Goal</p>
-                <div className="flex items-end gap-1 mt-1">
-                  <span className="text-4xl font-black text-foreground">{weeklyApps}</span>
-                  <span className="text-xl text-muted-foreground font-semibold mb-1">/ {weeklyGoal}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">applications this week</p>
-              </div>
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <Target className="w-8 h-8 text-primary" />
-              </div>
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Weekly</p>
+              <span className="text-xs font-bold text-foreground">{weeklyApps}/{weeklyGoal}</span>
             </div>
-            <Progress value={weeklyProgress} className="h-3" />
-            <p className="mt-2 text-xs text-muted-foreground">
-              {weeklyApps >= weeklyGoal
-                ? "🎉 Weekly goal crushed! Consider raising the bar."
-                : `${weeklyGoal - weeklyApps} more to hit your goal`}
+            <Progress value={weeklyProgress} className="h-2" />
+            <p className="text-[10px] text-muted-foreground mt-1">
+              {weeklyApps >= weeklyGoal ? "🎉 Goal hit!" : `${weeklyGoal - weeklyApps} to go`}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-4 gap-4">
-        {[
-          { label: "Total Applications", value: stats.total, icon: Briefcase, color: "text-blue-500" },
-          { label: "Active Pipelines", value: stats.active, icon: TrendingUp, color: "text-violet-500" },
-          { label: "Offers Received", value: stats.offers, icon: Trophy, color: "text-emerald-500" },
-          { label: "Response Rate", value: `${stats.responseRate}%`, icon: Zap, color: "text-amber-500" },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <Card key={label}>
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className={`w-10 h-10 rounded-xl bg-current/10 flex items-center justify-center ${color} bg-opacity-10`}
-                style={{ background: "var(--muted)" }}>
-                <Icon className={`w-5 h-5 ${color}`} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{value}</p>
-                <p className="text-xs text-muted-foreground">{label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Charts + Activity */}
-      <div className="grid grid-cols-3 gap-6">
+      {/* Middle row: Pipeline + Status + Weekly Activity */}
+      <div className="grid grid-cols-3 gap-3">
         {/* Funnel Chart */}
         <Card className="col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Application Pipeline</CardTitle>
+          <CardHeader className="pb-1 pt-3 px-4">
+            <CardTitle className="text-sm font-semibold">Application Pipeline</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
+          <CardContent className="px-4 pb-3">
+            <ResponsiveContainer width="100%" height={140}>
               <BarChart data={funnelData} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip
-                  contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "8px", fontSize: 12 }}
+                  contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "8px", fontSize: 11 }}
                   labelStyle={{ color: "var(--foreground)", fontWeight: 600 }}
                 />
-                <Bar dataKey="count" fill="var(--primary)" radius={[6, 6, 0, 0]} maxBarSize={60} />
+                <Bar dataKey="count" fill="var(--primary)" radius={[4, 4, 0, 0]} maxBarSize={40} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Status Pie */}
+        {/* Status Pie — compact */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Status Breakdown</CardTitle>
+          <CardHeader className="pb-1 pt-3 px-4">
+            <CardTitle className="text-sm font-semibold">Status</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-3">
             {statusData.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-40 text-muted-foreground text-sm">
-                <Briefcase className="w-8 h-8 mb-2 opacity-30" />
+              <div className="flex flex-col items-center justify-center h-28 text-muted-foreground text-xs">
+                <Briefcase className="w-6 h-6 mb-1 opacity-30" />
                 No applications yet
               </div>
             ) : (
-              <>
-                <ResponsiveContainer width="100%" height={150}>
+              <div className="flex gap-3 items-center">
+                <ResponsiveContainer width={100} height={100}>
                   <PieChart>
                     <Pie
                       data={statusData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={45}
-                      outerRadius={65}
+                      innerRadius={30}
+                      outerRadius={45}
                       paddingAngle={3}
                       dataKey="value"
                     >
@@ -349,77 +318,77 @@ export default function DashboardPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "8px", fontSize: 12 }}
+                      contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "6px", fontSize: 11 }}
                       formatter={(value, name) => [value, STATUS_CONFIG[name as keyof typeof STATUS_CONFIG]?.label || name]}
                     />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="space-y-1 mt-2">
-                  {statusData.slice(0, 4).map((entry) => (
-                    <div key={entry.name} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full" style={{ background: STATUS_COLORS[entry.name] }} />
-                        <span className="text-muted-foreground">{entry.label}</span>
+                <div className="space-y-1 flex-1 min-w-0">
+                  {statusData.map((entry) => (
+                    <div key={entry.name} className="flex items-center justify-between text-[11px]">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: STATUS_COLORS[entry.name] }} />
+                        <span className="text-muted-foreground truncate">{entry.label}</span>
                       </div>
-                      <span className="font-semibold text-foreground">{entry.value}</span>
+                      <span className="font-semibold text-foreground ml-2">{entry.value}</span>
                     </div>
                   ))}
                 </div>
-              </>
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Bottom Row */}
-      <div className="grid grid-cols-3 gap-6">
-        {/* Weekly Activity */}
+      {/* Bottom row: Activity + Goals + Resume Analytics */}
+      <div className="grid grid-cols-3 gap-3">
+        {/* Weekly Activity — compact */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">This Week&apos;s Activity</CardTitle>
+          <CardHeader className="pb-1 pt-3 px-4">
+            <CardTitle className="text-sm font-semibold">This Week</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-end gap-1.5 h-20">
+          <CardContent className="px-4 pb-3">
+            <div className="flex items-end gap-1 h-14">
               {weeklyActivityData.map(({ day, apps }) => (
-                <div key={day} className="flex-1 flex flex-col items-center gap-1">
+                <div key={day} className="flex-1 flex flex-col items-center gap-0.5">
                   <div
-                    className="w-full rounded-t-md bg-primary/80 transition-all"
-                    style={{ height: `${apps > 0 ? Math.max((apps / 5) * 64, 8) : 4}px`, opacity: apps > 0 ? 1 : 0.2 }}
+                    className="w-full rounded-t bg-primary/80 transition-all"
+                    style={{ height: `${apps > 0 ? Math.max((apps / 5) * 48, 6) : 3}px`, opacity: apps > 0 ? 1 : 0.2 }}
                   />
-                  <span className="text-xs text-muted-foreground">{day}</span>
+                  <span className="text-[9px] text-muted-foreground">{day}</span>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Today's Goals */}
+        {/* Today's Goals — compact */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-base font-semibold">Today&apos;s Goals</CardTitle>
-            <Link href="/goals" className="text-xs text-primary flex items-center gap-1 hover:underline">
-              All goals <ArrowRight className="w-3 h-3" />
+          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-4">
+            <CardTitle className="text-sm font-semibold">Today&apos;s Goals</CardTitle>
+            <Link href="/goals" className="text-[10px] text-primary flex items-center gap-0.5 hover:underline">
+              All <ArrowRight className="w-2.5 h-2.5" />
             </Link>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-3">
             {todayGoals.length === 0 ? (
-              <div className="text-center py-4 text-muted-foreground text-sm">
-                <Target className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                <p>No daily goals set yet.</p>
-                <Link href="/goals" className="text-primary text-xs mt-1 inline-block hover:underline">
-                  Set your first goal →
+              <div className="text-center py-3 text-muted-foreground text-xs">
+                <Target className="w-5 h-5 mx-auto mb-1 opacity-30" />
+                <p>No daily goals set.</p>
+                <Link href="/goals" className="text-primary text-[10px] mt-0.5 inline-block hover:underline">
+                  Set a goal →
                 </Link>
               </div>
             ) : (
-              <ul className="space-y-2">
+              <ul className="space-y-1.5">
                 {todayGoals.map((g) => (
-                  <li key={g.id} className="flex items-center gap-3">
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                  <li key={g.id} className="flex items-center gap-2">
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                       g.doneToday ? "border-emerald-500 bg-emerald-500" : "border-muted-foreground/30"
                     }`}>
-                      {g.doneToday && <div className="w-2 h-2 bg-white rounded-full" />}
+                      {g.doneToday && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                     </div>
-                    <span className={`text-sm ${g.doneToday ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                    <span className={`text-xs ${g.doneToday ? "line-through text-muted-foreground" : "text-foreground"}`}>
                       {g.title}
                     </span>
                   </li>
@@ -429,19 +398,19 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Base Resume Analytics */}
+        {/* Base Resume Analytics — compact */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Base Resume Analytics</CardTitle>
+          <CardHeader className="pb-1 pt-3 px-4">
+            <CardTitle className="text-sm font-semibold">Resume Usage</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="px-4 pb-3">
             {categoryStats.total === 0 ? (
-              <div className="text-center py-6 text-muted-foreground text-sm flex flex-col items-center justify-center h-full">
-                <FileText className="w-8 h-8 mb-2 opacity-30" />
-                <p>No resume category tracking data yet.</p>
+              <div className="text-center py-3 text-muted-foreground text-xs flex flex-col items-center">
+                <FileText className="w-5 h-5 mb-1 opacity-30" />
+                <p>No tracking data yet.</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {(Object.keys(CATEGORY_CONFIG) as ResumeCategory[]).map((cat) => {
                   const catCfg = CATEGORY_CONFIG[cat];
                   const count = categoryStats.counts[cat] || 0;
@@ -449,19 +418,17 @@ export default function DashboardPage() {
                   const CatIcon = getCategoryIcon(catCfg.iconName);
 
                   return (
-                    <div key={cat} className="space-y-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-1.5">
-                          <div className={`p-1 rounded-md ${catCfg.bgColor}`}>
-                            <CatIcon className={`w-3.5 h-3.5 ${catCfg.color}`} />
-                          </div>
+                    <div key={cat} className="space-y-0.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-1">
+                          <CatIcon className={`w-3 h-3 ${catCfg.color}`} />
                           <span className="font-medium text-foreground">{catCfg.label}</span>
                         </div>
                         <span className="text-muted-foreground font-semibold">
                           {count} ({pct}%)
                         </span>
                       </div>
-                      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
@@ -482,46 +449,46 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Recent Applications */}
+      {/* Recent Applications — compact table */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-base font-semibold">Recent Applications</CardTitle>
-          <Link href="/applications" className="text-xs text-primary flex items-center gap-1 hover:underline">
-            View all <ArrowRight className="w-3 h-3" />
+        <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-4">
+          <CardTitle className="text-sm font-semibold">Recent Applications</CardTitle>
+          <Link href="/applications" className="text-[10px] text-primary flex items-center gap-0.5 hover:underline">
+            View all <ArrowRight className="w-2.5 h-2.5" />
           </Link>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 pb-3">
           {applications.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Briefcase className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">No applications yet.</p>
-              <p className="text-sm mt-1">Start your hunt — add your first application!</p>
-              <Link href="/applications/new" className={buttonVariants({ className: "mt-4" })}>
-                <Plus className="w-4 h-4 mr-2" />
+            <div className="text-center py-6 text-muted-foreground">
+              <Briefcase className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p className="font-medium text-sm">No applications yet.</p>
+              <p className="text-xs mt-0.5">Start your hunt — add your first application!</p>
+              <Link href="/applications/new" className={buttonVariants({ size: "sm", className: "mt-3" })}>
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Add First Application
               </Link>
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {applications.slice(0, 5).map((app) => {
+              {applications.slice(0, 7).map((app) => {
                 const cfg = STATUS_CONFIG[app.status];
                 return (
                   <Link
                     key={app.id}
                     href={`/applications/${app.id}`}
-                    className="flex items-center justify-between py-3 hover:bg-muted/50 px-2 -mx-2 rounded-lg transition-colors"
+                    className="flex items-center justify-between py-2 hover:bg-muted/50 px-2 -mx-2 rounded transition-colors"
                   >
-                    <div>
-                      <p className="font-medium text-sm text-foreground">{app.role}</p>
-                      <p className="text-xs text-muted-foreground">{app.company}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium text-xs text-foreground truncate">{app.role}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{app.company}</p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 shrink-0 ml-3">
                       {app.appliedAt && (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-[10px] text-muted-foreground">
                           {format(parseISO(app.appliedAt), "MMM d")}
                         </span>
                       )}
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cfg.bgColor} ${cfg.color}`}>
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${cfg.bgColor} ${cfg.color}`}>
                         {cfg.label}
                       </span>
                     </div>
