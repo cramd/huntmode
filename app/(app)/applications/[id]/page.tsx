@@ -51,9 +51,9 @@ import {
   getMasterResume,
   getUserProfile,
 } from "@/lib/db";
-import type { UserProfile, ResumeCategory } from "@/lib/types";
+import type { UserProfile, ResumeCategory, OrgType } from "@/lib/types";
 import type { Application, MasterResume, ApplicationStatus } from "@/lib/types";
-import { STATUS_CONFIG, CATEGORY_CONFIG } from "@/lib/types";
+import { STATUS_CONFIG, CATEGORY_CONFIG, ORG_TYPE_CONFIG } from "@/lib/types";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { useCompletion } from "@ai-sdk/react";
@@ -469,6 +469,22 @@ export default function ApplicationDetailPage() {
                       className="h-8 text-sm"
                     />
                   </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Org Type</Label>
+                    <Select
+                      value={editForm.orgType || ""}
+                      onValueChange={(v) => setEditForm((f) => ({ ...f, orgType: v as OrgType }))}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="Select type..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.keys(ORG_TYPE_CONFIG) as OrgType[]).map((t) => (
+                          <SelectItem key={t} value={t}>{ORG_TYPE_CONFIG[t].label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <Button size="sm" className="w-full mt-2" onClick={handleSave} disabled={saving}>
                     {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Save className="w-3.5 h-3.5 mr-1" />Save</>}
                   </Button>
@@ -480,6 +496,7 @@ export default function ApplicationDetailPage() {
                     { label: "Role", value: app.role },
                     { label: "Location", value: app.location },
                     { label: "Salary", value: app.salaryRange },
+                    { label: "Org Type", value: app.orgType ? ORG_TYPE_CONFIG[app.orgType]?.label : undefined },
                     { label: "Applied", value: app.appliedAt ? format(parseISO(app.appliedAt), "MMM d, yyyy") : "Draft" },
                   ].map(({ label, value }) =>
                     value ? (

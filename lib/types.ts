@@ -25,7 +25,21 @@ export interface Application {
   salaryRange?: string;
   location?: string;
   remote?: boolean;
+  orgType?: OrgType;
 }
+
+export type OrgType = "startup" | "scaleup" | "enterprise" | "agency" | "consulting" | "nonprofit" | "government" | "other";
+
+export const ORG_TYPE_CONFIG: Record<OrgType, { label: string; color: string; bgColor: string }> = {
+  startup: { label: "Startup", color: "text-orange-600 dark:text-orange-400", bgColor: "bg-orange-100 dark:bg-orange-900/30" },
+  scaleup: { label: "Scale-up", color: "text-purple-600 dark:text-purple-400", bgColor: "bg-purple-100 dark:bg-purple-900/30" },
+  enterprise: { label: "Enterprise", color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-900/30" },
+  agency: { label: "Agency", color: "text-pink-600 dark:text-pink-400", bgColor: "bg-pink-100 dark:bg-pink-900/30" },
+  consulting: { label: "Consulting", color: "text-teal-600 dark:text-teal-400", bgColor: "bg-teal-100 dark:bg-teal-900/30" },
+  nonprofit: { label: "Non-profit", color: "text-emerald-600 dark:text-emerald-400", bgColor: "bg-emerald-100 dark:bg-emerald-900/30" },
+  government: { label: "Government", color: "text-slate-600 dark:text-slate-400", bgColor: "bg-slate-100 dark:bg-slate-900/30" },
+  other: { label: "Other", color: "text-gray-600 dark:text-gray-400", bgColor: "bg-gray-100 dark:bg-gray-900/30" },
+};
 
 export interface ProjectEntry {
   name: string;

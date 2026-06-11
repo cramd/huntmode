@@ -30,7 +30,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { getApplications, getActivityLogs, getUserProfile, getGoals, getMasterResumes } from "@/lib/db";
 import type { Application, ActivityLog, UserProfile, Goal, MasterResume } from "@/lib/types";
-import { STATUS_CONFIG, MOTIVATIONAL_MESSAGES, CATEGORY_CONFIG, type ResumeCategory } from "@/lib/types";
+import { STATUS_CONFIG, MOTIVATIONAL_MESSAGES, CATEGORY_CONFIG, ORG_TYPE_CONFIG, type ResumeCategory, type OrgType } from "@/lib/types";
 import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO } from "date-fns";
 import { Compass, Megaphone, Sliders, FileText } from "lucide-react";
 
@@ -186,6 +186,48 @@ export default function DashboardPage() {
     return { counts, total };
   }, [applications, resumes]);
 
+  // Role title trends — group by normalized role, compute counts and response rate
+  const roleTrends = useMemo(() => {
+    const map: Record<string, { count: number; progressed: number }> = {};
+    applications.forEach((a) => {
+      const role = a.role.trim();
+      if (!role) return;
+      // Normalize: lowercase for grouping, keep first-seen casing for display
+      const key = role.toLowerCase();
+      if (!map[key]) map[key] = { count: 0, progressed: 0 };
+      map[key].count++;
+      if (!["applied", "draft"].includes(a.status)) map[key].progressed++;
+    });
+    // Sort by count descending, take top 6
+    return Object.entries(map)
+      .sort(([, a], [, b]) => b.count - a.count)
+      .slice(0, 6)
+      .map(([key, v]) => {
+        // Find original casing from first match
+        const original = applications.find((a) => a.role.toLowerCase() === key)?.role || key;
+        return { role: original, count: v.count, responseRate: v.count > 0 ? Math.round((v.progressed / v.count) * 100) : 0 };
+      });
+  }, [applications]);
+
+  // Org type stats
+  const orgTypeStats = useMemo(() => {
+    const map: Record<string, { count: number; progressed: number }> = {};
+    applications.forEach((a) => {
+      const org = a.orgType || "unset";
+      if (!map[org]) map[org] = { count: 0, progressed: 0 };
+      map[org].count++;
+      if (!["applied", "draft"].includes(a.status)) map[org].progressed++;
+    });
+    return Object.entries(map)
+      .sort(([, a], [, b]) => b.count - a.count)
+      .map(([key, v]) => ({
+        type: key,
+        label: key === "unset" ? "Not set" : (ORG_TYPE_CONFIG[key as OrgType]?.label || key),
+        count: v.count,
+        responseRate: v.count > 0 ? Math.round((v.progressed / v.count) * 100) : 0,
+      }));
+  }, [applications]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -334,6 +376,99 @@ export default function DashboardPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Trend Analytics: Role Titles + Org Type */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Role Trends */}
+        <Card>
+          <CardHeader className="pb-1 pt-3 px-4">
+            <CardTitle className="text-sm font-semibold">Top Role Titles</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-3">
+            {roleTrends.length === 0 ? (
+              <div className="text-center py-3 text-muted-foreground text-xs">
+                <Briefcase className="w-5 h-5 mx-auto mb-1 opacity-30" />
+                <p>No applications yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {roleTrends.map(({ role, count, responseRate }) => (
+                  <div key={role} className="space-y-0.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-medium text-foreground truncate max-w-[60%]">{role}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">{count} apps</span>
+                        <span className={`font-semibold ${responseRate > 0 ? "text-emerald-500" : "text-muted-foreground"}`}>
+                          {responseRate}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden flex">
+                      <div
+                        className="h-full rounded-full bg-primary/70 transition-all duration-500"
+                        style={{ width: `${(count / (roleTrends[0]?.count || 1)) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Org Type Breakdown */}
+        <Card>
+          <CardHeader className="pb-1 pt-3 px-4">
+            <CardTitle className="text-sm font-semibold">By Org Type</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-3">
+            {orgTypeStats.length === 0 || (orgTypeStats.length === 1 && orgTypeStats[0].type === "unset") ? (
+              <div className="text-center py-3 text-muted-foreground text-xs">
+                <Target className="w-5 h-5 mx-auto mb-1 opacity-30" />
+                <p>Tag applications with org types to see trends.</p>
+                <p className="text-[10px] mt-0.5">Edit an application → Org Type dropdown</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {orgTypeStats.filter((s) => s.type !== "unset").map(({ type, label, count, responseRate }) => {
+                  const cfg = ORG_TYPE_CONFIG[type as OrgType];
+                  return (
+                    <div key={type} className="space-y-0.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${cfg?.bgColor || ""} ${cfg?.color || ""}`}>
+                            {label}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">{count} apps</span>
+                          <span className={`font-semibold ${responseRate > 0 ? "text-emerald-500" : "text-muted-foreground"}`}>
+                            {responseRate}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${(count / (orgTypeStats[0]?.count || 1)) * 100}%`,
+                            backgroundColor: type === "startup" ? "#f97316" : type === "scaleup" ? "#a855f7" : type === "enterprise" ? "#3b82f6" : type === "agency" ? "#ec4899" : type === "consulting" ? "#14b8a6" : "#64748b",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                {orgTypeStats.find((s) => s.type === "unset") && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    + {orgTypeStats.find((s) => s.type === "unset")?.count} untagged
+                  </p>
+                )}
               </div>
             )}
           </CardContent>
