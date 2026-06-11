@@ -85,3 +85,34 @@ export async function generateDocument(params: GenerateParams) {
 
   return streamText({ model, prompt, maxOutputTokens: 4000 });
 }
+
+export function buildSuggestPrompt(params: {
+  content: string;
+  type: "cv" | "cover_letter";
+  jobDescription: string;
+  role: string;
+  company: string;
+}): string {
+  const docType = params.type === "cv" ? "resume/CV" : "cover letter";
+  return `You are an expert career coach and ${docType} reviewer. Review the following ${docType} and provide specific, actionable suggestions to improve it for the target role.
+
+JOB TITLE: ${params.role}
+COMPANY: ${params.company}
+
+JOB DESCRIPTION:
+${params.jobDescription}
+
+CURRENT ${docType.toUpperCase()}:
+${params.content}
+
+Instructions:
+- Start with a brief overall assessment (2-3 sentences)
+- List 5-8 specific, actionable improvements as numbered items
+- For each suggestion, explain WHY it matters for this specific role
+- Highlight any missing keywords or skills from the job description that could be added (if truthful)
+- Note any weak phrasing that could be strengthened
+- Do NOT rewrite the whole document — just give suggestions
+- Be direct and constructive, not generic
+
+Format as clean markdown with headers.`;
+}

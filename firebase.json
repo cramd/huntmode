@@ -11,6 +11,12 @@
         "oAuthBrandDisplayName": "HuntMode",
         "supportEmail": "marcsherwood@gmail.com"
       }
-    }
+    },
+    "authorizedDomains": [
+      "localhost",
+      "dvp-insight-platform.firebaseapp.com",
+      "fuzzynacho.org",
+      "www.fuzzynacho.org"
+    ]
   }
 }

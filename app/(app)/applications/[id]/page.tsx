@@ -17,6 +17,10 @@ import {
   Megaphone,
   Sliders,
   FileText,
+  Upload,
+  MessageSquareText,
+  PenLine,
+  X,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -82,6 +86,12 @@ export default function ApplicationDetailPage() {
   const [generating, setGenerating] = useState<"cv" | "cl" | null>(null);
   const generatingRef = useRef<"cv" | "cl" | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [uploading, setUploading] = useState<"cv" | "cl" | null>(null);
+  const [suggestOpen, setSuggestOpen] = useState<"cv" | "cl" | null>(null);
+  const [suggestions, setSuggestions] = useState<string>("");
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const cvFileRef = useRef<HTMLInputElement>(null);
+  const clFileRef = useRef<HTMLInputElement>(null);
 
   const [regenError, setRegenError] = useState<string | null>(null);
   const completionRef = useRef<string>("");
@@ -227,6 +237,91 @@ export default function ApplicationDetailPage() {
         apiKey: userProfile?.aiApiKey || undefined,
       },
     });
+  };
+
+  const handlePdfUpload = async (file: File, target: "cv" | "cl") => {
+    if (!user || !id || !userProfile?.aiApiKey) {
+      toast.error("No AI API key set. Go to Settings and add your key.");
+      return;
+    }
+    setUploading(target);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("provider", userProfile.aiProvider || "openai");
+      formData.append("apiKey", userProfile.aiApiKey);
+      const res = await fetch("/api/parse-resume", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+      // Combine parsed sections into a single text block
+      const s = data.sections;
+      const text = [
+        s.summary && `## Summary\n${s.summary}`,
+        s.experience && `## Experience\n${s.experience}`,
+        s.skills && `## Skills\n${s.skills}`,
+        s.education && `## Education\n${s.education}`,
+        s.certifications && `## Certifications\n${s.certifications}`,
+      ].filter(Boolean).join("\n\n");
+      const field = target === "cv" ? "generatedCV" : "generatedCoverLetter";
+      setEditForm((f) => ({ ...f, [field]: text }));
+      setApp((a) => a ? { ...a, [field]: text } : null);
+      await updateApplication(user.uid, id, { [field]: text });
+      toast.success(`PDF content extracted and saved to ${target === "cv" ? "CV" : "cover letter"}!`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Upload failed";
+      toast.error(msg);
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  const handleStartWriting = (target: "cv" | "cl") => {
+    const field = target === "cv" ? "generatedCV" : "generatedCoverLetter";
+    // Set a single space so the textarea appears (user can then type)
+    setEditForm((f) => ({ ...f, [field]: " " }));
+    setApp((a) => a ? { ...a, [field]: " " } : null);
+  };
+
+  const handleSuggest = async (target: "cv" | "cl") => {
+    if (!app || !userProfile?.aiApiKey) {
+      toast.error("No AI API key set. Go to Settings.");
+      return;
+    }
+    const content = target === "cv" ? editForm.generatedCV : editForm.generatedCoverLetter;
+    if (!content?.trim()) {
+      toast.error("No content to review yet.");
+      return;
+    }
+    setSuggestOpen(target);
+    setSuggestions("");
+    setSuggestLoading(true);
+    try {
+      const res = await fetch("/api/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content,
+          jobDescription: app.jobDescription,
+          role: app.role,
+          company: app.company,
+          type: target === "cv" ? "cv" : "cover_letter",
+          provider: userProfile.aiProvider || "openai",
+          apiKey: userProfile.aiApiKey,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Suggestion failed");
+      }
+      const text = await res.text();
+      setSuggestions(text);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Suggestion failed";
+      toast.error(msg);
+      setSuggestOpen(null);
+    } finally {
+      setSuggestLoading(false);
+    }
   };
 
   if (loading) {
@@ -455,6 +550,17 @@ export default function ApplicationDetailPage() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-semibold">Tailored CV</CardTitle>
                     <div className="flex gap-2">
+                      {(app.generatedCV || editForm.generatedCV) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSuggest("cv")}
+                          disabled={suggestLoading}
+                          title="AI Suggestions"
+                        >
+                          <MessageSquareText className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
@@ -481,6 +587,17 @@ export default function ApplicationDetailPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
+                  <input
+                    ref={cvFileRef}
+                    type="file"
+                    accept=".pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handlePdfUpload(f, "cv");
+                      e.target.value = "";
+                    }}
+                  />
                   {app.generatedCV || editForm.generatedCV || (generating === "cv" && completion) ? (
                     <Textarea
                       value={editForm.generatedCV || (generating === "cv" ? completion : "") || ""}
@@ -488,6 +605,7 @@ export default function ApplicationDetailPage() {
                         setEditForm((f) => ({ ...f, generatedCV: e.target.value }))
                       }
                       readOnly={genLoading && generating === "cv"}
+                      placeholder="Paste or write your CV content here..."
                       className={`min-h-[500px] font-mono text-xs ${genLoading && generating === "cv" ? "opacity-70" : ""}`}
                       onBlur={async () => {
                         if (!user || !id || (genLoading && generating === "cv")) return;
@@ -500,26 +618,50 @@ export default function ApplicationDetailPage() {
                       <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
                       <p className="text-sm text-muted-foreground">Generating tailored CV...</p>
                     </div>
+                  ) : uploading === "cv" ? (
+                    <div className="flex flex-col items-center justify-center min-h-48">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
+                      <p className="text-sm text-muted-foreground">Extracting text from PDF...</p>
+                    </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center min-h-48 text-muted-foreground text-sm">
-                      <Sparkles className="w-10 h-10 mb-3 opacity-30" />
-                      <p className="font-medium text-foreground">No CV generated yet</p>
-                      <p className="text-xs mt-1 mb-4 max-w-xs text-center">
-                        Generate a tailored CV from your base resume and this job description.
+                      <FileText className="w-10 h-10 mb-3 opacity-30" />
+                      <p className="font-medium text-foreground">No CV content yet</p>
+                      <p className="text-xs mt-1 mb-5 max-w-sm text-center">
+                        Choose how to add your tailored CV for this application.
                       </p>
-                      {masterResume ? (
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {masterResume && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleRegenerate("cv")}
+                            disabled={genLoading}
+                          >
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            AI Generate
+                          </Button>
+                        )}
                         <Button
                           size="sm"
-                          onClick={() => handleRegenerate("cv")}
-                          disabled={genLoading}
+                          variant="outline"
+                          onClick={() => cvFileRef.current?.click()}
                         >
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          Generate CV
+                          <Upload className="w-4 h-4 mr-2" />
+                          Upload PDF
                         </Button>
-                      ) : (
-                        <Link href="/resume" className={buttonVariants({ size: "sm", variant: "outline" })}>
-                          Link a resume first →
-                        </Link>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleStartWriting("cv")}
+                        >
+                          <PenLine className="w-4 h-4 mr-2" />
+                          Write / Paste
+                        </Button>
+                      </div>
+                      {!masterResume && (
+                        <p className="text-xs mt-3 text-muted-foreground">
+                          <Link href="/resume" className="underline hover:text-foreground">Link a base resume</Link> to enable AI generation
+                        </p>
                       )}
                     </div>
                   )}
@@ -533,6 +675,17 @@ export default function ApplicationDetailPage() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-semibold">Cover Letter</CardTitle>
                     <div className="flex gap-2">
+                      {(app.generatedCoverLetter || editForm.generatedCoverLetter) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSuggest("cl")}
+                          disabled={suggestLoading}
+                          title="AI Suggestions"
+                        >
+                          <MessageSquareText className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
@@ -559,6 +712,17 @@ export default function ApplicationDetailPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
+                  <input
+                    ref={clFileRef}
+                    type="file"
+                    accept=".pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handlePdfUpload(f, "cl");
+                      e.target.value = "";
+                    }}
+                  />
                   {app.generatedCoverLetter || editForm.generatedCoverLetter || (generating === "cl" && completion) ? (
                     <Textarea
                       value={editForm.generatedCoverLetter || (generating === "cl" ? completion : "") || ""}
@@ -566,6 +730,7 @@ export default function ApplicationDetailPage() {
                         setEditForm((f) => ({ ...f, generatedCoverLetter: e.target.value }))
                       }
                       readOnly={genLoading && generating === "cl"}
+                      placeholder="Paste or write your cover letter here..."
                       className={`min-h-[500px] font-mono text-xs ${genLoading && generating === "cl" ? "opacity-70" : ""}`}
                       onBlur={async () => {
                         if (!user || !id || (genLoading && generating === "cl")) return;
@@ -582,26 +747,50 @@ export default function ApplicationDetailPage() {
                       <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
                       <p className="text-sm text-muted-foreground">Generating cover letter...</p>
                     </div>
+                  ) : uploading === "cl" ? (
+                    <div className="flex flex-col items-center justify-center min-h-48">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
+                      <p className="text-sm text-muted-foreground">Extracting text from PDF...</p>
+                    </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center min-h-48 text-muted-foreground text-sm">
-                      <Sparkles className="w-10 h-10 mb-3 opacity-30" />
-                      <p className="font-medium text-foreground">No cover letter generated yet</p>
-                      <p className="text-xs mt-1 mb-4 max-w-xs text-center">
-                        Generate a tailored cover letter for this application.
+                      <FileText className="w-10 h-10 mb-3 opacity-30" />
+                      <p className="font-medium text-foreground">No cover letter yet</p>
+                      <p className="text-xs mt-1 mb-5 max-w-sm text-center">
+                        Choose how to add your cover letter for this application.
                       </p>
-                      {masterResume ? (
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {masterResume && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleRegenerate("cl")}
+                            disabled={genLoading}
+                          >
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            AI Generate
+                          </Button>
+                        )}
                         <Button
                           size="sm"
-                          onClick={() => handleRegenerate("cl")}
-                          disabled={genLoading}
+                          variant="outline"
+                          onClick={() => clFileRef.current?.click()}
                         >
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          Generate Cover Letter
+                          <Upload className="w-4 h-4 mr-2" />
+                          Upload PDF
                         </Button>
-                      ) : (
-                        <Link href="/resume" className={buttonVariants({ size: "sm", variant: "outline" })}>
-                          Link a resume first →
-                        </Link>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleStartWriting("cl")}
+                        >
+                          <PenLine className="w-4 h-4 mr-2" />
+                          Write / Paste
+                        </Button>
+                      </div>
+                      {!masterResume && (
+                        <p className="text-xs mt-3 text-muted-foreground">
+                          <Link href="/resume" className="underline hover:text-foreground">Link a base resume</Link> to enable AI generation
+                        </p>
                       )}
                     </div>
                   )}
@@ -639,6 +828,34 @@ export default function ApplicationDetailPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDelete(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Suggestions Dialog */}
+      <Dialog open={suggestOpen !== null} onOpenChange={(open) => { if (!open) setSuggestOpen(null); }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquareText className="w-5 h-5 text-primary" />
+              AI Suggestions — {suggestOpen === "cv" ? "CV" : "Cover Letter"}
+            </DialogTitle>
+          </DialogHeader>
+          {suggestLoading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
+              <p className="text-sm text-muted-foreground">Analyzing your content...</p>
+            </div>
+          ) : (
+            <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
+              {suggestions}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSuggestOpen(null)}>
+              <X className="w-4 h-4 mr-2" />
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
