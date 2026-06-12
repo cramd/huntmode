@@ -98,46 +98,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthError(null);
     const provider = new GoogleAuthProvider();
 
-    // Mobile browsers can't handle popups reliably — use full-page redirect
-    if (isMobile()) {
-      try {
-        console.log("[Auth] Mobile detected, using signInWithRedirect");
-        await signInWithRedirect(auth, provider);
-      } catch (err: unknown) {
-        const code = (err as { code?: string }).code ?? "";
-        const message = (err as { message?: string }).message ?? "Unknown error";
-        console.error("[Auth] Mobile redirect error:", code, message);
-        if (code === "auth/unauthorized-domain") {
-          setAuthError(
-            `This domain is not authorized for sign-in. The auth domain (${auth.config.authDomain}) needs to be accessible. Please contact the admin.`
-          );
-        } else if (code === "auth/configuration-not-found") {
-          setAuthError("Google Sign-In is not enabled. Enable it in Firebase Console → Authentication → Sign-in method → Google.");
-        } else {
-          setAuthError(`Sign-in failed: ${code || message}`);
-        }
-      }
-      return;
-    }
-
-    // Desktop: use popup
+    // Try popup first on ALL platforms (including mobile).
+    // Modern mobile Chrome supports popups and third-party cookie blocking
+    // silently breaks signInWithRedirect (the old approach).
     try {
+      console.log("[Auth] Attempting signInWithPopup");
       await signInWithPopup(auth, provider);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
       const message = (err as { message?: string }).message ?? "Unknown error";
       console.error("[Auth] Popup error:", code, message);
-      if (code === "auth/popup-blocked") {
-        // Popup was blocked — fall back to redirect
-        await signInWithRedirect(auth, provider);
+
+      if (code === "auth/popup-blocked" || code === "auth/cancelled-popup-request") {
+        // Popup was blocked (common on some mobile browsers) — fall back to redirect
+        console.log("[Auth] Popup blocked, falling back to signInWithRedirect");
+        try {
+          await signInWithRedirect(auth, provider);
+        } catch (redirectErr: unknown) {
+          const redirectCode = (redirectErr as { code?: string }).code ?? "";
+          console.error("[Auth] Redirect also failed:", redirectCode);
+          setAuthError(`Sign-in failed: ${redirectCode || "redirect error"}`);
+        }
+      } else if (code === "auth/popup-closed-by-user") {
+        // Silent — user cancelled
       } else if (code === "auth/configuration-not-found") {
-        setAuthError("Google Sign-In is not enabled. Enable it in the Firebase Console → Authentication → Sign-in method → Google.");
+        setAuthError("Google Sign-In is not enabled. Enable it in Firebase Console → Authentication → Sign-in method → Google.");
       } else if (code === "auth/unauthorized-domain") {
         setAuthError(
           `This domain is not authorized for sign-in. Add "${window.location.hostname}" to Firebase Console → Authentication → Settings → Authorized domains.`
         );
-      } else if (code === "auth/popup-closed-by-user") {
-        // Silent — user cancelled
       } else {
         setAuthError(`Sign-in failed: ${code || message}`);
       }
