@@ -237,7 +237,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-4">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-4">
       {/* Header — compact */}
       <div className="flex items-center justify-between">
         <div>
@@ -252,8 +252,8 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Top row: Stats + Streak + Weekly Goal — all in one row */}
-      <div className="grid grid-cols-6 gap-3">
+      {/* Top row: Stats + Streak + Weekly Goal — responsive grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* 4 stat cards */}
         {[
           { label: "Total", value: stats.total, icon: Briefcase, color: "text-blue-500" },
@@ -305,10 +305,10 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Middle row: Pipeline + Status + Weekly Activity */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Middle row: Pipeline + Status + Weekly Activity — responsive grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Funnel Chart */}
-        <Card className="col-span-2">
+        <Card className="lg:col-span-2">
           <CardHeader className="pb-1 pt-3 px-4">
             <CardTitle className="text-sm font-semibold">Application Pipeline</CardTitle>
           </CardHeader>
@@ -382,8 +382,8 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Trend Analytics: Role Titles + Org Type */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Trend Analytics: Role Titles + Org Type — responsive grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Role Trends */}
         <Card>
           <CardHeader className="pb-1 pt-3 px-4">
@@ -475,8 +475,8 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Bottom row: Activity + Goals + Resume Analytics */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Bottom row: Activity + Goals + Resume Analytics — responsive grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Weekly Activity — compact */}
         <Card>
           <CardHeader className="pb-1 pt-3 px-4">
