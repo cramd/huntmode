@@ -27,7 +27,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/20 flex flex-col">
       {/* Header */}
-      <header className="flex items-center gap-3 px-8 py-6">
+      <header className="flex items-center gap-3 px-4 sm:px-8 py-4 sm:py-6">
         <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary">
           <Zap className="w-5 h-5 text-primary-foreground" />
         </div>
@@ -35,25 +35,25 @@ export default function LandingPage() {
       </header>
 
       {/* Hero */}
-      <main className="flex-1 flex items-center justify-center px-6">
-        <div className="max-w-2xl w-full text-center space-y-8">
+      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-0">
+        <div className="max-w-2xl w-full text-center space-y-6 sm:space-y-8">
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
               <Zap className="w-3.5 h-3.5" />
               Your ADHD-Friendly Job Search Command Center
             </div>
-            <h1 className="text-5xl font-bold tracking-tight text-foreground leading-tight">
+            <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground leading-tight">
               Land your dream role.{" "}
               <span className="text-primary">Stay on track.</span>
             </h1>
-            <p className="text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
               HuntMode helps you generate tailored CVs and cover letters,
               track every application, hit your weekly goals, and stay motivated
               throughout the search.
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 text-left">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-left">
             {[
               {
                 icon: FileText,
@@ -93,7 +93,7 @@ export default function LandingPage() {
             <Button
               size="lg"
               onClick={signInWithGoogle}
-              className="px-8 py-6 text-base rounded-xl font-semibold"
+              className="w-full sm:w-auto px-8 py-6 text-base rounded-xl font-semibold"
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path
