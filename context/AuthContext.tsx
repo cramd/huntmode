@@ -11,13 +11,16 @@ import {
   onAuthStateChanged,
   signInWithPopup,
   signInWithRedirect,
+  signInWithCredential,
   getRedirectResult,
   GoogleAuthProvider,
+  GithubAuthProvider,
   signOut,
   User,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { saveUserProfile, getUserProfile } from "@/lib/db";
+import { AnalyticsEvents, captureEvent, identifyUser, resetUser } from "@/lib/analytics";
 
 function isMobile(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -26,101 +29,398 @@ function isMobile(): boolean {
   );
 }
 
+function serializeError(err: any): string {
+  if (!err) return "null";
+  try {
+    const obj: any = {};
+    if (typeof err === "object") {
+      Object.getOwnPropertyNames(err).forEach((key) => {
+        const val = err[key];
+        if (typeof val === "object" && val !== null) {
+          try {
+            obj[key] = JSON.parse(JSON.stringify(val));
+          } catch {
+            obj[key] = String(val);
+          }
+        } else {
+          obj[key] = val;
+        }
+      });
+      return JSON.stringify(obj);
+    }
+    return String(err);
+  } catch (e) {
+    return "Serialization failed: " + String(e);
+  }
+}
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   authError: string | null;
+  accessStatus: "approved" | "pending" | "denied" | "rate_limited" | "none" | null;
   signInWithGoogle: () => Promise<void>;
+  signInWithGithub: () => Promise<void>;
   logout: () => Promise<void>;
+  requestAccess: (customEmail?: string) => Promise<void>;
+  refreshAccessStatus: () => Promise<void>;
+  authLogs: string;
+  clearAuthLogs: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   authError: null,
+  accessStatus: null,
   signInWithGoogle: async () => {},
+  signInWithGithub: async () => {},
   logout: async () => {},
+  requestAccess: async (customEmail?: string) => {},
+  refreshAccessStatus: async () => {},
+  authLogs: "",
+  clearAuthLogs: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [accessStatus, setAccessStatus] = useState<
+    "approved" | "pending" | "denied" | "rate_limited" | "none" | null
+  >(null);
+  const [authLogs, setAuthLogs] = useState<string>("");
+
+  const logDiagnostic = (message: string) => {
+    if (typeof window === "undefined") return;
+    const time = new Date().toLocaleTimeString();
+    const existing = localStorage.getItem("huntmode:auth-logs") || "";
+    const newLine = `[${time}] ${message}\n`;
+    let updated = existing + newLine;
+    const lines = updated.split("\n").filter(Boolean);
+    if (lines.length > 50) {
+      updated = lines.slice(lines.length - 50).join("\n") + "\n";
+    }
+    localStorage.setItem("huntmode:auth-logs", updated);
+    setAuthLogs(updated);
+    console.log(`[Diagnostic] ${message}`);
+  };
+
+  const clearAuthLogs = () => {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem("huntmode:auth-logs");
+    setAuthLogs("");
+  };
+
+  const ensureUserProfile = async (u: User) => {
+    const profile = await getUserProfile(u.uid);
+    if (!profile) {
+      logDiagnostic("Creating user profile...");
+      await saveUserProfile(u.uid, {
+        uid: u.uid,
+        name: u.displayName || "",
+        email: u.email || "",
+        targetRole: "",
+        weeklyGoal: 5,
+        currentStreak: 0,
+        longestStreak: 0,
+        lastActiveDate: null,
+        createdAt: new Date().toISOString(),
+      });
+    }
+  };
+
+  const resolveAccessForUser = async (
+    u: User
+  ): Promise<{ status: "approved" | "denied" | "rate_limited" | "none"; isNewRegistration: boolean }> => {
+    const token = await u.getIdToken();
+    const authHeaders = { Authorization: `Bearer ${token}` };
+
+    const statusRes = await fetch(`/api/auth/check-status?uid=${u.uid}`, {
+      headers: authHeaders,
+    });
+    if (!statusRes.ok) throw new Error("Status check failed");
+    const statusData = await statusRes.json();
+    let status = statusData.status || "none";
+    let isNewRegistration = false;
+
+    if (status === "none") {
+      const registerRes = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          ...authHeaders,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          uid: u.uid,
+          email: u.email,
+          name: u.displayName,
+        }),
+      });
+      const registerData = await registerRes.json().catch(() => ({}));
+      if (registerRes.status === 429) {
+        return { status: "rate_limited", isNewRegistration: false };
+      }
+      if (!registerRes.ok) {
+        throw new Error(registerData.error || "Registration failed");
+      }
+      status = registerData.status || "approved";
+      isNewRegistration = registerData.created === true;
+    }
+
+    if (status === "pending") return { status: "approved", isNewRegistration };
+    return { status, isNewRegistration };
+  };
+
+  const syncAnalyticsForUser = (
+    u: User,
+    resolution: { status: "approved" | "denied" | "rate_limited" | "none"; isNewRegistration: boolean }
+  ) => {
+    captureEvent(AnalyticsEvents.USER_SIGNED_IN, { method: "google" });
+    identifyUser({
+      uid: u.uid,
+      email: u.email,
+      name: u.displayName,
+      accessStatus: resolution.status,
+    });
+    if (resolution.isNewRegistration) {
+      captureEvent(AnalyticsEvents.USER_REGISTERED);
+    }
+    if (resolution.status === "denied" || resolution.status === "rate_limited") {
+      captureEvent(AnalyticsEvents.ACCESS_BLOCKED, { reason: resolution.status });
+    }
+  };
 
   useEffect(() => {
-    // Safety timeout — if Firebase never responds, stop the spinner after 8s
-    const timeout = setTimeout(() => setLoading(false), 8000);
+    if (typeof window !== "undefined") {
+      setAuthLogs(localStorage.getItem("huntmode:auth-logs") || "");
+    }
+  }, []);
 
-    // Process redirect result on mobile after returning from Google
+  useEffect(() => {
+    // Load Google Identity Services script
+    if (typeof document !== "undefined") {
+      const existingScript = document.getElementById("google-gsi-client");
+      if (!existingScript) {
+        const script = document.createElement("script");
+        script.id = "google-gsi-client";
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        document.body.appendChild(script);
+        logDiagnostic("Google Identity Services script injected.");
+      }
+    }
+
+    // Setup network interception to log Google API calls and responses
+    if (typeof window !== "undefined" && !(window as any).__network_intercepted) {
+      (window as any).__network_intercepted = true;
+
+      // 1. Fetch Interceptor
+      const originalFetch = window.fetch;
+      window.fetch = async function (...args) {
+        const url = String(args[0]);
+        const isIdentityCall = url.includes("googleapis.com") || url.includes("identitytoolkit");
+        if (isIdentityCall) {
+          logDiagnostic(`[Network Fetch] Request to: ${url}`);
+          try {
+            const res = await originalFetch.apply(this, args);
+            logDiagnostic(`[Network Fetch Response] Status: ${res.status} for: ${url.split("?")[0]}`);
+            if (!res.ok) {
+              const clone = res.clone();
+              const text = await clone.text();
+              logDiagnostic(`[Network Fetch Error Payload] ${text}`);
+            }
+            return res;
+          } catch (err) {
+            logDiagnostic(`[Network Fetch Failed] Error: ${String(err)} for: ${url}`);
+            throw err;
+          }
+        }
+        return originalFetch.apply(this, args);
+      };
+
+      // 2. XHR Interceptor
+      const originalOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function (this: XMLHttpRequest, method: string, url: string | URL, ...rest: any[]) {
+        const urlStr = String(url);
+        const isIdentityCall = urlStr.includes("googleapis.com") || urlStr.includes("identitytoolkit");
+        if (isIdentityCall) {
+          logDiagnostic(`[Network XHR] ${method} to: ${urlStr}`);
+          const xhr = this;
+          this.addEventListener("load", function () {
+            logDiagnostic(`[Network XHR Response] Status: ${xhr.status} for: ${urlStr.split("?")[0]}`);
+            if (xhr.status < 200 || xhr.status >= 300) {
+              logDiagnostic(`[Network XHR Error Payload] ${xhr.responseText}`);
+            }
+          });
+          this.addEventListener("error", function () {
+            logDiagnostic(`[Network XHR Failed] for: ${urlStr}`);
+          });
+        }
+        return originalOpen.apply(this, [method, url, ...rest] as any);
+      } as any;
+    }
+
+    logDiagnostic("AuthProvider initialized. Location: " + window.location.href);
+    logDiagnostic("User Agent: " + navigator.userAgent);
+
+    // Safety timeout — if Firebase never responds, stop the spinner after 8s
+    const timeout = setTimeout(() => {
+      logDiagnostic("Safety timeout triggered: Firebase took more than 8 seconds to respond.");
+      setLoading(false);
+    }, 8000);
+
+    // Process redirect result after returning from Google
+    logDiagnostic("Calling getRedirectResult(auth)...");
     getRedirectResult(auth)
       .then(async (result) => {
         if (result?.user) {
-          // onAuthStateChanged will fire and handle profile creation
+          logDiagnostic(`getRedirectResult successful. User: ${result.user.email} (${result.user.uid})`);
+        } else {
+          logDiagnostic("getRedirectResult completed, but no redirect user was found.");
         }
       })
       .catch((err) => {
         const code = (err as { code?: string }).code ?? "";
+        const message = (err as { message?: string }).message ?? "Unknown error";
+        logDiagnostic(`getRedirectResult failed. Code: ${code}, Message: ${message}`);
+        logDiagnostic(`Detailed getRedirectResult error: ${serializeError(err)}`);
         if (code !== "auth/no-current-user") {
           setAuthError(`Sign-in failed: ${code}`);
         }
         setLoading(false);
       });
 
+    logDiagnostic("Subscribing to onAuthStateChanged...");
     const unsub = onAuthStateChanged(auth, async (u) => {
       clearTimeout(timeout);
-      setUser(u);
       if (u) {
-        const profile = await getUserProfile(u.uid);
-        if (!profile) {
-          await saveUserProfile(u.uid, {
-            uid: u.uid,
-            name: u.displayName || "",
-            email: u.email || "",
-            targetRole: "",
-            weeklyGoal: 5,
-            currentStreak: 0,
-            longestStreak: 0,
-            lastActiveDate: null,
-            createdAt: new Date().toISOString(),
-          });
+        logDiagnostic(`onAuthStateChanged: User is signed in. Email: ${u.email}, UID: ${u.uid}`);
+        // Marc is automatically approved
+        if (u.email === "marcsherwood@gmail.com") {
+          logDiagnostic("User is administrator (Marc). Auto-approving access.");
+          setAccessStatus("approved");
+          setUser(u);
+          syncAnalyticsForUser(u, { status: "approved", isNewRegistration: false });
+          await ensureUserProfile(u);
+          setLoading(false);
+        } else {
+          logDiagnostic(`Resolving access for user ${u.email}...`);
+          try {
+            const resolution = await resolveAccessForUser(u);
+            logDiagnostic(`Access resolved: ${resolution.status}`);
+            setAccessStatus(resolution.status);
+            setUser(u);
+            syncAnalyticsForUser(u, resolution);
+            if (resolution.status === "approved") {
+              await ensureUserProfile(u);
+            }
+          } catch (err) {
+            console.error("[Auth] Error resolving access:", err);
+            logDiagnostic(`Error resolving access: ${(err as Error).message}`);
+            setAccessStatus("none");
+            setUser(u);
+          } finally {
+            setLoading(false);
+          }
         }
+      } else {
+        logDiagnostic("onAuthStateChanged: User is signed out (null).");
+        resetUser();
+        setUser(null);
+        setAccessStatus(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {
+      logDiagnostic("AuthProvider running cleanup (unsubscribing).");
       clearTimeout(timeout);
       unsub();
     };
   }, []);
 
   const signInWithGoogle = async () => {
+    logDiagnostic("signInWithGoogle action triggered.");
     setAuthError(null);
+
+    // Try Google Identity Services (first-party OAuth flow) first to bypass iframe issues on custom domains
+    try {
+      logDiagnostic("Attempting first-party Google Identity Services flow...");
+      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "928125401687-bqj0qujjgc75mgae0c10foq8k9b3lreq.apps.googleusercontent.com";
+      const google = (window as any).google;
+      
+      if (google?.accounts?.oauth2) {
+        logDiagnostic("Google Identity Services detected. Initializing Token Client...");
+        const tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: "email profile openid",
+          callback: async (tokenResponse: any) => {
+            logDiagnostic("Google OAuth2 token response received.");
+            if (tokenResponse.error) {
+              logDiagnostic(`Google OAuth2 error: ${tokenResponse.error} - ${tokenResponse.error_description || ""}`);
+              setAuthError(`Google Sign-In failed: ${tokenResponse.error_description || tokenResponse.error}`);
+              return;
+            }
+
+            try {
+              logDiagnostic("Signing into Firebase using OAuth2 access token...");
+              const credential = GoogleAuthProvider.credential(null, tokenResponse.access_token);
+              const userCredential = await signInWithCredential(auth, credential);
+              logDiagnostic(`Firebase sign-in successful! User: ${userCredential.user.email}`);
+            } catch (firebaseErr: any) {
+              logDiagnostic(`Firebase sign-in failed with OAuth token: ${serializeError(firebaseErr)}`);
+              setAuthError(`Sign-in failed: ${firebaseErr.code || firebaseErr.message}`);
+            }
+          },
+        });
+
+        logDiagnostic("Launching Google Consent Popup...");
+        tokenClient.requestAccessToken();
+        return; // Success, bypass Firebase fallback
+      } else {
+        logDiagnostic("Google Identity Services script not available. Falling back to Firebase Auth...");
+      }
+    } catch (gisErr) {
+      logDiagnostic(`Google Identity Services flow encountered an error: ${String(gisErr)}. Falling back to Firebase Auth...`);
+    }
+
+    // FALLBACK: Original Firebase Auth Flow (Popup / Redirect)
     const provider = new GoogleAuthProvider();
 
-    // Try popup first on ALL platforms (including mobile).
-    // Modern mobile Chrome supports popups and third-party cookie blocking
-    // silently breaks signInWithRedirect (the old approach).
+    if (isMobile()) {
+      logDiagnostic("Mobile browser detected. Initiating fallback signInWithRedirect...");
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (err: unknown) {
+        const code = (err as { code?: string }).code ?? "";
+        logDiagnostic(`signInWithRedirect fallback failed. Code: ${code}`);
+        setAuthError(`Sign-in failed: ${code || "redirect error"}`);
+      }
+      return;
+    }
+
     try {
-      console.log("[Auth] Attempting signInWithPopup");
+      logDiagnostic("Initiating fallback signInWithPopup...");
       await signInWithPopup(auth, provider);
+      logDiagnostic("signInWithPopup completed successfully!");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
       const message = (err as { message?: string }).message ?? "Unknown error";
-      console.error("[Auth] Popup error:", code, message);
+      logDiagnostic(`signInWithPopup failed. Code: ${code}, Message: ${message}`);
+      logDiagnostic(`Detailed signInWithPopup error: ${serializeError(err)}`);
 
-      if (code === "auth/popup-blocked" || code === "auth/cancelled-popup-request") {
-        // Popup was blocked (common on some mobile browsers) — fall back to redirect
-        console.log("[Auth] Popup blocked, falling back to signInWithRedirect");
+      if (code === "auth/popup-blocked" || code === "auth/cancelled-popup-request" || code === "auth/popup-closed-by-user" || code === "auth/internal-error") {
+        logDiagnostic(`Attempting fallback to signInWithRedirect due to error code: ${code}`);
         try {
           await signInWithRedirect(auth, provider);
         } catch (redirectErr: unknown) {
           const redirectCode = (redirectErr as { code?: string }).code ?? "";
-          console.error("[Auth] Redirect also failed:", redirectCode);
+          logDiagnostic(`signInWithRedirect fallback failed. Code: ${redirectCode}`);
+          logDiagnostic(`Detailed signInWithRedirect fallback error: ${serializeError(redirectErr)}`);
           setAuthError(`Sign-in failed: ${redirectCode || "redirect error"}`);
         }
-      } else if (code === "auth/popup-closed-by-user") {
-        // Silent — user cancelled
       } else if (code === "auth/configuration-not-found") {
         setAuthError("Google Sign-In is not enabled. Enable it in Firebase Console → Authentication → Sign-in method → Google.");
       } else if (code === "auth/unauthorized-domain") {
@@ -133,12 +433,139 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const signInWithGithub = async () => {
+    logDiagnostic("signInWithGithub action triggered.");
+    setAuthError(null);
+
+    const provider = new GithubAuthProvider();
+
+    if (isMobile()) {
+      logDiagnostic("Mobile browser detected. Initiating fallback signInWithRedirect...");
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (err: unknown) {
+        const code = (err as { code?: string }).code ?? "";
+        logDiagnostic(`signInWithRedirect fallback failed. Code: ${code}`);
+        setAuthError(`Sign-in failed: ${code || "redirect error"}`);
+      }
+      return;
+    }
+
+    try {
+      logDiagnostic("Initiating GitHub signInWithPopup...");
+      await signInWithPopup(auth, provider);
+      logDiagnostic("signInWithPopup completed successfully!");
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code ?? "";
+      const message = (err as { message?: string }).message ?? "Unknown error";
+      logDiagnostic(`signInWithPopup failed. Code: ${code}, Message: ${message}`);
+      logDiagnostic(`Detailed signInWithPopup error: ${serializeError(err)}`);
+
+      if (code === "auth/popup-blocked" || code === "auth/cancelled-popup-request" || code === "auth/popup-closed-by-user" || code === "auth/internal-error") {
+        logDiagnostic(`Attempting fallback to signInWithRedirect due to error code: ${code}`);
+        try {
+          await signInWithRedirect(auth, provider);
+        } catch (redirectErr: unknown) {
+          const redirectCode = (redirectErr as { code?: string }).code ?? "";
+          logDiagnostic(`signInWithRedirect fallback failed. Code: ${redirectCode}`);
+          logDiagnostic(`Detailed signInWithRedirect fallback error: ${serializeError(redirectErr)}`);
+          setAuthError(`Sign-in failed: ${redirectCode || "redirect error"}`);
+        }
+      } else if (code === "auth/configuration-not-found") {
+        setAuthError("GitHub Sign-In is not enabled. Enable it in Firebase Console → Authentication → Sign-in method → GitHub.");
+      } else if (code === "auth/unauthorized-domain") {
+        setAuthError(
+          `This domain is not authorized for sign-in. Add "${window.location.hostname}" to Firebase Console → Authentication → Settings → Authorized domains.`
+        );
+      } else {
+        setAuthError(`Sign-in failed: ${code || message}`);
+      }
+    }
+  };
+
   const logout = async () => {
+    logDiagnostic("logout action triggered.");
+    resetUser();
     await signOut(auth);
   };
 
+  const requestAccess = async (customEmail?: string) => {
+    if (!user) return;
+    const emailToUse = customEmail || user.email;
+    if (!emailToUse) {
+      logDiagnostic("requestAccess failed: No email address available.");
+      setAuthError("Email is required to request access.");
+      return;
+    }
+    setLoading(true);
+    logDiagnostic(`requestAccess action triggered. Email: ${emailToUse}`);
+    try {
+      const res = await fetch("/api/auth/request-access", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          uid: user.uid,
+          email: emailToUse,
+          name: user.displayName,
+        }),
+      });
+      if (!res.ok) throw new Error("Request access failed");
+      const data = await res.json();
+      if (data.status) {
+        logDiagnostic(`Access request status response: ${data.status}`);
+        setAccessStatus(data.status);
+      }
+    } catch (err) {
+      console.error("[Auth] Failed to request access:", err);
+      logDiagnostic(`Failed to request access: ${(err as Error).message}`);
+      setAuthError("Failed to request access. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshAccessStatus = async () => {
+    if (!user) return;
+    if (user.email === "marcsherwood@gmail.com") {
+      setAccessStatus("approved");
+      return;
+    }
+    setLoading(true);
+    logDiagnostic("refreshAccessStatus action triggered.");
+    try {
+      const resolution = await resolveAccessForUser(user);
+      logDiagnostic(`Status refreshed: ${resolution.status}`);
+      setAccessStatus(resolution.status);
+      syncAnalyticsForUser(user, resolution);
+      if (resolution.status === "approved") {
+        await ensureUserProfile(user);
+      }
+    } catch (err) {
+      console.error("[Auth] Failed to refresh status:", err);
+      logDiagnostic(`Failed to refresh status: ${(err as Error).message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, authError, signInWithGoogle, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        authError,
+        accessStatus,
+        signInWithGoogle,
+        signInWithGithub,
+        logout,
+        requestAccess,
+        refreshAccessStatus,
+        authLogs,
+        clearAuthLogs,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

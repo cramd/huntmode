@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { Plus, Search, ExternalLink, Trash2, ChevronUp, ChevronDown, Compass, Megaphone, Sliders, FileText } from "lucide-react";
+import { Plus, Search, ExternalLink, Trash2, ChevronUp, ChevronDown, Compass, Megaphone, Sliders, FileText, BarChart2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ import { STATUS_CONFIG, CATEGORY_CONFIG, type ResumeCategory } from "@/lib/types
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 
-type SortKey = "createdAt" | "company" | "role" | "status" | "appliedAt";
+type SortKey = "createdAt" | "company" | "role" | "status" | "appliedAt" | "fitScore";
 type SortDir = "asc" | "desc";
 
 export function getCategoryIcon(iconName: string) {
@@ -81,8 +81,13 @@ export default function ApplicationsPage() {
       list = list.filter((a) => a.status === statusFilter);
     }
     list.sort((a, b) => {
-      const va: string = (a[sortKey] as string) || "";
-      const vb: string = (b[sortKey] as string) || "";
+      if (sortKey === "fitScore") {
+        const va = a.fitScore?.overall ?? -1;
+        const vb = b.fitScore?.overall ?? -1;
+        return sortDir === "asc" ? va - vb : vb - va;
+      }
+      const va: string = (a[sortKey as keyof Application] as string) || "";
+      const vb: string = (b[sortKey as keyof Application] as string) || "";
       const cmp = va.localeCompare(vb);
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -122,18 +127,18 @@ export default function ApplicationsPage() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-white/5 pb-5">
         <div>
-          <h1 className="text-3xl font-bold">Applications</h1>
-          <p className="text-muted-foreground mt-1">
-            {applications.length} total · {counts["applied"] || 0} applied ·{" "}
-            {counts["interview"] || 0} interviewing · {counts["offer"] || 0} offers
+          <h1 className="text-3xl font-black text-white tracking-tight">Applications</h1>
+          <p className="text-xs text-slate-400 mt-1.5 font-semibold tracking-wide uppercase">
+            {applications.length} total &bull; {counts["applied"] || 0} applied &bull;{" "}
+            {counts["interview"] || 0} interviewing &bull; {counts["offer"] || 0} offers
           </p>
         </div>
-        <Link href="/applications/new" className={buttonVariants()}>
-          <Plus className="w-4 h-4 mr-2" />
+        <Link href="/applications/new" className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold px-4 py-2.5 text-xs shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/20 transition-all hover:-translate-y-[1px]">
+          <Plus className="w-4 h-4 mr-1.5" />
           New Application
         </Link>
       </div>
@@ -142,10 +147,10 @@ export default function ApplicationsPage() {
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setStatusFilter("all")}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
             statusFilter === "all"
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/15"
+              : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white border border-white/5"
           }`}
         >
           All ({applications.length})
@@ -157,10 +162,10 @@ export default function ApplicationsPage() {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
                 statusFilter === s
-                  ? `${cfg.bgColor} ${cfg.color} ring-2 ring-offset-1 ring-current`
-                  : `${cfg.bgColor} ${cfg.color} opacity-70 hover:opacity-100`
+                  ? `border-current bg-current/10 ${cfg.color} shadow-sm`
+                  : `border-white/5 bg-white/5 ${cfg.color} opacity-70 hover:opacity-100 hover:bg-white/10`
               }`}
             >
               {cfg.label} {cnt > 0 ? `(${cnt})` : ""}
@@ -171,56 +176,129 @@ export default function ApplicationsPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
         <Input
           placeholder="Search by company or role..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
+          className="pl-9 bg-slate-900/40 border-white/5 focus:border-indigo-500/30 text-white text-sm rounded-xl py-5 shadow-inner"
         />
       </div>
 
       {/* Table */}
-      <Card>
+      <Card className="bg-slate-900/40 border-white/5 shadow-xl overflow-hidden rounded-2xl">
         <CardContent className="p-0">
           {filtered.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              <p className="font-medium">No applications found.</p>
+            <div className="text-center py-16 text-slate-500">
+              <p className="font-semibold text-slate-400">No applications found.</p>
               {applications.length === 0 && (
-                <Link href="/applications/new" className={buttonVariants({ className: "mt-4" })}>
-                  <Plus className="w-4 h-4 mr-2" />
+                <Link href="/applications/new" className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold px-4 py-2 text-xs shadow-lg mt-4 transition-all">
+                  <Plus className="w-4 h-4 mr-1.5" />
                   Add Your First Application
                 </Link>
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Mobile card list */}
+            <div className="md:hidden divide-y divide-white/5">
+              {filtered.map((app) => {
+                const cfg = STATUS_CONFIG[app.status];
+                const resume = app.resumeUsed ? resumeMap[app.resumeUsed] : null;
+                const cat = resume?.category || "general";
+                const catCfg = CATEGORY_CONFIG[cat];
+                const CatIcon = getCategoryIcon(catCfg.iconName);
+                return (
+                  <div
+                    key={app.id}
+                    className="p-4 space-y-2.5 hover:bg-white/5 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <Link href={`/applications/${app.id}`} className="flex items-center gap-2.5 min-w-0 flex-1">
+                        {app.resumeUsed && (
+                          <div className={`p-1.5 rounded-lg border border-current/25 bg-current/10 shrink-0 ${catCfg.color}`}>
+                            <CatIcon className="w-3.5 h-3.5" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-bold text-white truncate">{app.company}</p>
+                          <p className="text-sm text-slate-300 font-semibold truncate">{app.role}</p>
+                        </div>
+                      </Link>
+                      {app.jobUrl && (
+                        <a
+                          href={app.jobUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white shrink-0"
+                          title="View job posting"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      )}
+                    </div>
+                    <Link href={`/applications/${app.id}`} className="block space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-current/25 bg-current/10 ${cfg.color}`}>
+                        {cfg.label}
+                      </span>
+                      {app.fitScore ? (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black border ${
+                          app.fitScore.overall >= 75
+                            ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                            : app.fitScore.overall >= 50
+                            ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                            : "bg-red-500/15 text-red-300 border-red-500/30"
+                        }`}>
+                          <BarChart2 className="w-2.5 h-2.5" />
+                          {app.fitScore.overall}% fit
+                        </span>
+                      ) : null}
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {app.appliedAt
+                          ? format(parseISO(app.appliedAt), "MMM d, yyyy")
+                          : "Not applied yet"}
+                      </span>
+                    </div>
+                    {app.notes && (
+                      <p className="text-xs text-slate-500 line-clamp-2">{app.notes}</p>
+                    )}
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-muted/30">
+                  <tr className="border-b border-white/5 bg-white/5">
                     {(
                       [
                         { key: "company" as SortKey, label: "Company" },
                         { key: "role" as SortKey, label: "Role" },
                         { key: "status" as SortKey, label: "Status" },
                         { key: "appliedAt" as SortKey, label: "Applied" },
+                        { key: "fitScore" as SortKey, label: "Fit" },
                       ] as { key: SortKey; label: string }[]
                     ).map(({ key, label }) => (
                       <th
                         key={key}
-                        className="text-left px-4 py-3 font-medium text-muted-foreground cursor-pointer hover:text-foreground select-none"
+                        className="text-left px-4 py-3 font-bold text-slate-400 uppercase tracking-wider text-[10px] cursor-pointer hover:text-white select-none transition-colors"
                         onClick={() => handleSort(key)}
                       >
-                        <span className="inline-flex items-center gap-1">
+                        <span className="inline-flex items-center gap-1.5">
+                          {key === "fitScore" && <BarChart2 className="w-3 h-3" />}
                           {label} <SortIcon col={key} />
                         </span>
                       </th>
                     ))}
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Notes</th>
+                    <th className="text-left px-4 py-3 font-bold text-slate-400 uppercase tracking-wider text-[10px]">Notes</th>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-white/5">
                   {filtered.map((app) => {
                     const cfg = STATUS_CONFIG[app.status];
                     const resume = app.resumeUsed ? resumeMap[app.resumeUsed] : null;
@@ -231,42 +309,60 @@ export default function ApplicationsPage() {
                     return (
                       <tr
                         key={app.id}
-                        className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                        className="hover:bg-white/5 transition-colors"
                       >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-2.5">
                             {app.resumeUsed && (
-                              <div className={`p-1 rounded-md ${catCfg.bgColor}`} title={catCfg.label}>
-                                <CatIcon className={`w-3.5 h-3.5 ${catCfg.color}`} />
+                              <div className={`p-1.5 rounded-lg border border-current/25 bg-current/10 ${catCfg.color}`} title={catCfg.label}>
+                                <CatIcon className="w-3.5 h-3.5" />
                               </div>
                             )}
-                            <Link href={`/applications/${app.id}`} className="font-semibold text-foreground hover:text-primary transition-colors">
+                            <Link href={`/applications/${app.id}`} className="font-bold text-white hover:text-indigo-400 transition-colors">
                               {app.company}
                             </Link>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">{app.role}</td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cfg.bgColor} ${cfg.color}`}>
+                        <td className="px-4 py-3.5 text-slate-300 font-semibold">{app.role}</td>
+                        <td className="px-4 py-3.5">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-current/25 bg-current/10 ${cfg.color}`}>
                             {cfg.label}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">
+                        <td className="px-4 py-3.5 text-slate-400 font-medium">
                           {app.appliedAt
                             ? format(parseISO(app.appliedAt), "MMM d, yyyy")
-                            : <span className="text-muted-foreground/50 italic">Not yet</span>}
+                            : <span className="text-slate-500 italic">Not yet</span>}
                         </td>
-                        <td className="px-4 py-3 max-w-xs">
-                          <p className="truncate text-muted-foreground text-xs">{app.notes || "—"}</p>
+                        <td className="px-4 py-3.5">
+                          {app.fitScore ? (
+                            <Link href={`/applications/${app.id}?tab=fit`}>
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black border ${
+                                app.fitScore.overall >= 75
+                                  ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                                  : app.fitScore.overall >= 50
+                                  ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                                  : "bg-red-500/15 text-red-300 border-red-500/30"
+                              }`}>
+                                <BarChart2 className="w-2.5 h-2.5" />
+                                {app.fitScore.overall}%
+                              </span>
+                            </Link>
+                          ) : (
+                            <span className="text-[10px] text-slate-600">—</span>
+                          )}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3.5 max-w-xs">
+                          <p className="truncate text-slate-400 text-xs font-medium">{app.notes || "—"}</p>
+                        </td>
+                        <td className="px-4 py-3.5">
                           <div className="flex items-center gap-2 justify-end">
                             {app.jobUrl && (
                               <a
                                 href={app.jobUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                                className="p-1.5 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-all"
                                 title="View job posting"
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
@@ -274,7 +370,7 @@ export default function ApplicationsPage() {
                             )}
                             <button
                               onClick={() => setDeleteId(app.id)}
-                              className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                              className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-all"
                               title="Delete"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -287,22 +383,23 @@ export default function ApplicationsPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>
 
       {/* Delete dialog */}
       <Dialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
-        <DialogContent>
+        <DialogContent className="bg-slate-900 border-white/5 rounded-2xl max-w-sm p-6">
           <DialogHeader>
-            <DialogTitle>Delete Application</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-white">Delete Application</DialogTitle>
           </DialogHeader>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-slate-400 text-sm py-2">
             Are you sure you want to delete this application? This cannot be undone.
           </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+          <DialogFooter className="flex gap-2 justify-end mt-4">
+            <Button variant="outline" onClick={() => setDeleteId(null)} className="border-white/10 hover:bg-white/5 text-white rounded-xl">Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} className="bg-red-600 hover:bg-red-500 text-white rounded-xl">Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

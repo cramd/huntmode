@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
-import { getModel, buildSuggestPrompt } from "@/lib/ai";
+import { buildSuggestPrompt, streamTextWithFallback, formatAIError } from "@/lib/ai";
 import type { AIProvider } from "@/lib/ai";
-import { streamText } from "ai";
+import { adminAuth } from "@/lib/firebase-admin";
+import { trackTokenUsage } from "@/lib/cost-tracker";
 
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
@@ -24,6 +25,28 @@ export async function POST(req: NextRequest) {
     apiKey?: string;
   };
 
+  const authHeader = req.headers.get("authorization");
+  let userEmail = "";
+  let uid = "";
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.substring(7);
+    try {
+      const decoded = await adminAuth.verifyIdToken(token);
+      userEmail = decoded.email || "";
+      uid = decoded.uid || "";
+    } catch (err) {
+      console.error("[suggest] Auth verification failed:", err);
+    }
+  }
+
+  const isMarc = userEmail === "marcsherwood@gmail.com";
+  if (!isMarc && (!apiKey || !apiKey.trim())) {
+    return new Response(
+      JSON.stringify({ error: "No AI API key provided. Please configure your own AI key in Settings." }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   if (!content?.trim()) {
     return new Response(
       JSON.stringify({ error: "No content to review. Write or paste your content first." }),
@@ -41,7 +64,6 @@ export async function POST(req: NextRequest) {
   const docType = (type === "cv" || type === "cover_letter") ? type : "cv";
 
   try {
-    const model = getModel((provider as AIProvider) || "openai", apiKey);
     const prompt = buildSuggestPrompt({
       content,
       type: docType,
@@ -50,24 +72,21 @@ export async function POST(req: NextRequest) {
       company: company || "the company",
     });
 
-    const result = await streamText({ model, prompt, maxOutputTokens: 2000 });
+    const { text: fullText, inputTokens, outputTokens } = await streamTextWithFallback({
+      provider: (provider as AIProvider) || "openai",
+      apiKey,
+      prompt,
+      maxOutputTokens: 2000,
+    });
 
-    // Consume stream to catch provider errors
-    const chunks: string[] = [];
-    try {
-      for await (const chunk of result.textStream) {
-        chunks.push(chunk);
+    if (uid) {
+      try {
+        await trackTokenUsage(uid, (provider as AIProvider) || "openai", inputTokens, outputTokens);
+      } catch (usageErr) {
+        console.error("Failed to get token usage:", usageErr);
       }
-    } catch (streamErr: unknown) {
-      console.error("AI suggest stream error:", streamErr);
-      const msg = streamErr instanceof Error ? streamErr.message : "AI suggestion failed";
-      return new Response(JSON.stringify({ error: msg }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
     }
 
-    const fullText = chunks.join("");
     if (!fullText.trim()) {
       return new Response(JSON.stringify({ error: "AI returned empty suggestions." }), {
         status: 500,
@@ -81,7 +100,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: unknown) {
     console.error("AI suggest error:", err);
-    const message = err instanceof Error ? err.message : "AI suggestion failed";
+    const message = formatAIError(err);
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

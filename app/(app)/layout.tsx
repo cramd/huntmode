@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Menu, Zap } from "lucide-react";
+import { Menu, Zap, ShieldAlert, RefreshCw, LogOut, Plus, Clock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -14,12 +14,19 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const {
+    user,
+    loading,
+    accessStatus,
+    refreshAccessStatus,
+    logout,
+  } = useAuth();
   const router = useRouter();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -43,6 +50,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const handleRefreshStatus = async () => {
+    setActionLoading(true);
+    await refreshAccessStatus();
+    setActionLoading(false);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -56,6 +69,97 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!user) return null;
 
+  if (accessStatus === "denied" || accessStatus === "rate_limited" || accessStatus === "none") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+
+        <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/5 bg-slate-900/60 p-8 text-center shadow-2xl backdrop-blur-xl">
+          <div
+            className={cn(
+              "absolute top-0 left-0 right-0 h-1 bg-gradient-to-r",
+              accessStatus === "denied"
+                ? "from-indigo-500 to-red-500"
+                : "from-indigo-500 to-amber-500"
+            )}
+          />
+
+          <div className="flex items-center justify-center gap-2 mb-8">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
+              <Zap className="w-4.5 h-4.5 text-primary-foreground" />
+            </div>
+            <span className="font-bold text-base tracking-tight text-white">HuntMode</span>
+          </div>
+
+          <div className="flex justify-center mb-6">
+            {accessStatus === "denied" ? (
+              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-red-500/10 text-red-500 border border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.15)]">
+                <ShieldAlert className="w-8 h-8" />
+              </div>
+            ) : (
+              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.15)]">
+                <Clock className="w-8 h-8" />
+              </div>
+            )}
+          </div>
+
+          <h2 className="text-2xl font-bold text-white mb-3">
+            {accessStatus === "denied" && "Access Denied"}
+            {accessStatus === "rate_limited" && "Sign-ups Temporarily Full"}
+            {accessStatus === "none" && "Could Not Complete Sign-up"}
+          </h2>
+
+          <p className="text-sm text-slate-400 leading-relaxed mb-8">
+            {accessStatus === "denied" &&
+              "Your account was blocked by the administrator. If you believe this was an error, please reach out directly."}
+            {accessStatus === "rate_limited" &&
+              "HuntMode limits new sign-ups to 10 per hour to prevent abuse. Please try again in a little while."}
+            {accessStatus === "none" &&
+              "Something went wrong while setting up your account. Try again, or sign out and back in."}
+          </p>
+
+          <div className="mb-8 p-3.5 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between text-left">
+            <div className="overflow-hidden mr-2">
+              <p className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Signed In As</p>
+              <p className="text-sm font-semibold text-white truncate">{user.displayName || "Google User"}</p>
+              <p className="text-xs text-slate-400 truncate">{user.email}</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => logout()}
+              className="text-slate-400 hover:text-white hover:bg-white/5"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            {(accessStatus === "rate_limited" || accessStatus === "none") && (
+              <Button
+                onClick={handleRefreshStatus}
+                disabled={actionLoading}
+                className="w-full py-6 text-sm font-semibold rounded-xl"
+              >
+                <RefreshCw className={cn("w-4 h-4 mr-2", actionLoading && "animate-spin")} />
+                {actionLoading ? "Trying Again..." : "Try Again"}
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              onClick={() => logout()}
+              className="w-full text-slate-400 hover:text-white hover:bg-white/5 text-xs py-2"
+            >
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const initials = user.displayName
     ? user.displayName
         .split(" ")
@@ -66,7 +170,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     : "U";
 
   return (
-    <div className="flex min-h-screen bg-background flex-col md:flex-row">
+    <div className="flex min-h-screen bg-background flex-col md:flex-row relative overflow-hidden selection:bg-indigo-500/30">
+      {/* Decorative ambient background lights */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-[40%] right-[-10%] w-[60%] h-[60%] bg-purple-500/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[50%] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none" />
+
       {/* Desktop Sidebar (Fixed position) */}
       <div className="hidden md:block">
         <Sidebar
@@ -123,15 +232,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Content Body */}
         <main
           className={cn(
-            "flex-1 min-h-screen overflow-y-auto transition-all duration-300 w-full",
+            "flex-1 min-h-screen overflow-y-auto transition-all duration-300 w-full pb-20 md:pb-0",
             isMounted && (isCollapsed ? "md:pl-16" : "md:pl-64"),
             !isMounted && "md:pl-64"
           )}
         >
           {children}
         </main>
+
+        {/* Mobile FAB — quick new application */}
+        <Link
+          href="/applications/new"
+          className="fixed bottom-5 right-4 z-50 md:hidden inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold px-4 py-3 text-xs shadow-lg shadow-indigo-500/30 transition-all active:scale-95"
+          aria-label="New application"
+        >
+          <Plus className="w-4 h-4" />
+          New
+        </Link>
       </div>
     </div>
   );
 }
-

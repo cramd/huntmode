@@ -2,8 +2,34 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Helper to check if the user is approved to use the application.
+    // Marc Sherwood (marcsherwood@gmail.com) is automatically approved if email is verified.
+    // Other users are approved if they have an approved entry in the accessRequests collection.
+    function isApproved(uid) {
+      return request.auth != null && (
+        (request.auth.token.email == 'marcsherwood@gmail.com' && request.auth.token.email_verified == true) ||
+        (exists(/databases/$(database)/documents/accessRequests/$(uid)) &&
+         get(/databases/$(database)/documents/accessRequests/$(uid)).data.status == 'approved')
+      );
+    }
+
+    function isAdmin() {
+      return request.auth != null &&
+        request.auth.token.email == 'marcsherwood@gmail.com' &&
+        request.auth.token.email_verified == true;
+    }
+
+    match /accessRequests/{uid} {
+      allow read, write: if isAdmin();
+    }
+
     match /users/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if request.auth != null && request.auth.uid == uid && isApproved(uid);
+    }
+    
+    // Allow the Rock Tracker demo app to write to the global rocks collection
+    match /rocks/{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }

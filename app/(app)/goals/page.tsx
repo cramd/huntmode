@@ -10,6 +10,8 @@ import {
   Calendar,
   Trophy,
   Loader2,
+  Zap,
+  ChevronRight,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,7 +45,58 @@ import type { Goal, ActivityLog, UserProfile } from "@/lib/types";
 import { format, subDays, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { toast } from "sonner";
 
-const PRESET_DAILY_GOALS = [
+const MILESTONE_BADGES = [
+  { days: 3, label: "3-Day Spark", emoji: "⚡", color: "text-yellow-400", bg: "bg-yellow-500/10 border-yellow-500/20" },
+  { days: 7, label: "7-Day Streak", emoji: "🔥", color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
+  { days: 14, label: "2-Week Warrior", emoji: "🛡️", color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
+  { days: 30, label: "30-Day Legend", emoji: "🏆", color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
+  { days: 60, label: "60-Day Machine", emoji: "🤖", color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
+  { days: 100, label: "100-Day Elite", emoji: "💎", color: "text-indigo-400", bg: "bg-indigo-500/10 border-indigo-500/20" },
+];
+
+const PRESET_PACKS = [
+  {
+    id: "job-search",
+    label: "Job Search Machine",
+    emoji: "🎯",
+    color: "from-indigo-600 to-purple-600",
+    borderColor: "border-indigo-500/30",
+    bg: "bg-indigo-500/10",
+    goals: [
+      { title: "Apply to 2 jobs", type: "daily" as const },
+      { title: "Research 3 companies", type: "daily" as const },
+      { title: "Follow up on 1 application", type: "daily" as const },
+    ],
+  },
+  {
+    id: "momentum",
+    label: "Momentum Builder",
+    emoji: "⚡",
+    color: "from-amber-500 to-orange-500",
+    borderColor: "border-amber-500/30",
+    bg: "bg-amber-500/10",
+    goals: [
+      { title: "Network with 1 person", type: "daily" as const },
+      { title: "Practice 1 interview question", type: "daily" as const },
+      { title: "10 cold LinkedIn messages", type: "weekly" as const },
+    ],
+  },
+  {
+    id: "wellbeing",
+    label: "Wellbeing & Focus",
+    emoji: "🧠",
+    color: "from-emerald-600 to-teal-600",
+    borderColor: "border-emerald-500/30",
+    bg: "bg-emerald-500/10",
+    goals: [
+      { title: "Take a 15 min walk", type: "daily" as const },
+      { title: "Celebrate 1 small win", type: "daily" as const },
+      { title: "Review my goals & progress", type: "weekly" as const },
+    ],
+  },
+];
+
+const QUICK_ADD_GOALS = [
   "Apply to 2 jobs",
   "Research 3 companies",
   "Follow up on 1 application",
@@ -129,6 +182,41 @@ export default function GoalsPage() {
     toast.success("Goal removed");
   };
 
+  const handleAddPack = async (pack: (typeof PRESET_PACKS)[0]) => {
+    if (!user) return;
+    const existing = new Set(goals.map((g) => g.title.toLowerCase()));
+    const toAdd = pack.goals.filter((p) => !existing.has(p.title.toLowerCase()));
+    if (toAdd.length === 0) {
+      toast("All goals from this pack are already added!");
+      return;
+    }
+    try {
+      const created: Goal[] = await Promise.all(
+        toAdd.map(async (p) => {
+          const id = await saveGoal(user.uid, {
+            title: p.title,
+            type: p.type,
+            targetCount: p.type === "weekly" ? 5 : 1,
+            completedDates: [],
+          });
+          return {
+            id,
+            uid: user.uid,
+            title: p.title,
+            type: p.type,
+            targetCount: p.type === "weekly" ? 5 : 1,
+            completedDates: [],
+            createdAt: new Date().toISOString(),
+          };
+        })
+      );
+      setGoals((gs) => [...gs, ...created]);
+      toast.success(`${pack.label} pack added — ${created.length} new habits!`);
+    } catch {
+      toast.error("Failed to add pack");
+    }
+  };
+
   // Streak heatmap: last 90 days
   const heatmapDays = useMemo(() => {
     const days: { date: string; count: number }[] = [];
@@ -153,6 +241,9 @@ export default function GoalsPage() {
     }
     return s;
   }, [heatmapDays]);
+
+  const earnedBadges = MILESTONE_BADGES.filter((b) => streak >= b.days);
+  const nextBadge = MILESTONE_BADGES.find((b) => streak < b.days);
 
   const weeklyStats = useMemo(() => {
     const thisWeek = heatmapDays.filter(({ date }) => {
@@ -179,55 +270,55 @@ export default function GoalsPage() {
   }
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-white/5 pb-5">
         <div>
-          <h1 className="text-3xl font-bold">Goals & Activity</h1>
-          <p className="text-muted-foreground mt-1">
-            Track your daily habits and stay consistent on the hunt.
+          <h1 className="text-3xl font-black text-white tracking-tight">Goals & Habits</h1>
+          <p className="text-xs text-slate-400 mt-1.5 font-medium">
+            Track daily routines, build job search habits, and log activity streaks.
           </p>
         </div>
-        <Button onClick={() => setShowAdd(true)}>
-          <Plus className="w-4 h-4 mr-2" />
+        <Button onClick={() => setShowAdd(true)} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg transition-all">
+          <Plus className="w-4 h-4 mr-1.5" />
           Add Goal
         </Button>
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-primary/90 to-primary text-primary-foreground">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="border border-indigo-500/20 bg-gradient-to-br from-indigo-950/40 to-purple-950/40 shadow-lg shadow-indigo-500/5 transition-all">
           <CardContent className="p-5 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center">
-              <Flame className="w-7 h-7 text-amber-300" />
+            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shadow-inner">
+              <Flame className="w-7 h-7 text-amber-400 animate-pulse" />
             </div>
             <div>
-              <p className="text-3xl font-black">{streak}</p>
-              <p className="text-sm text-primary-foreground/70">day streak</p>
+              <p className="text-3xl font-black text-white">{streak}</p>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">Day Streak</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-slate-900/40 border-white/5 hover:border-white/10 transition-all shadow-md">
           <CardContent className="p-5 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-violet-600 dark:text-violet-400" />
+            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center shadow-inner">
+              <Calendar className="w-6 h-6 text-purple-400" />
             </div>
             <div>
-              <p className="text-3xl font-black text-foreground">{weeklyStats.activeDays}</p>
-              <p className="text-sm text-muted-foreground">active days this week</p>
+              <p className="text-3xl font-black text-white">{weeklyStats.activeDays}</p>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">Active Days This Week</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-slate-900/40 border-white/5 hover:border-white/10 transition-all shadow-md">
           <CardContent className="p-5 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-              <Trophy className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center shadow-inner">
+              <Trophy className="w-6 h-6 text-emerald-400" />
             </div>
             <div>
-              <p className="text-3xl font-black text-foreground">{profile?.longestStreak || streak}</p>
-              <p className="text-sm text-muted-foreground">best streak (days)</p>
+              <p className="text-3xl font-black text-white">{profile?.longestStreak || streak}</p>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">Best Streak (Days)</p>
             </div>
           </CardContent>
         </Card>
@@ -235,59 +326,67 @@ export default function GoalsPage() {
 
       {/* Today's Progress */}
       {dailyGoals.length > 0 && (
-        <Card>
-          <CardContent className="p-5 space-y-3">
+        <Card className="bg-slate-900/40 border-white/5 shadow-md">
+          <CardContent className="p-5 space-y-3.5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-semibold text-foreground">Today&apos;s Progress</p>
-                <p className="text-sm text-muted-foreground">
-                  {todayDoneCount} of {dailyGoals.length} tasks done
+                <p className="font-bold text-white text-sm">Today&apos;s Habits Progress</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {todayDoneCount} of {dailyGoals.length} tasks completed today
                 </p>
               </div>
               {todayDoneCount === dailyGoals.length && dailyGoals.length > 0 && (
-                <span className="text-emerald-600 font-semibold text-sm flex items-center gap-1">
+                <span className="text-emerald-400 font-bold text-xs flex items-center gap-1 uppercase tracking-wider">
                   <Trophy className="w-4 h-4" />
                   Day Complete!
                 </span>
               )}
             </div>
-            <Progress value={todayProgress} className="h-3" />
+            <Progress value={todayProgress} className="h-2" />
           </CardContent>
         </Card>
       )}
 
       {/* Activity Heatmap */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Activity Heatmap (last 90 days)</CardTitle>
+      <Card className="bg-slate-900/40 border-white/5 shadow-md">
+        <CardHeader className="pb-3 border-b border-white/5">
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-white">Consistency Heatmap (90 Days)</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-1">
+        <CardContent className="pt-4">
+          <div className="flex flex-wrap gap-1.5">
             {heatmapDays.map(({ date, count }) => (
               <div
                 key={date}
-                title={`${date}: ${count} activities`}
-                className={`w-3.5 h-3.5 rounded-sm transition-colors ${
+                title={`${date}: ${count} activities logged`}
+                className={`w-3.5 h-3.5 rounded-sm transition-all duration-200 cursor-pointer ${
                   count === 0
-                    ? "bg-muted"
+                    ? "bg-slate-950 border border-white/5 hover:bg-slate-900"
                     : count === 1
-                    ? "bg-primary/30"
+                    ? "bg-indigo-950 border border-indigo-900/30 hover:bg-indigo-900"
                     : count === 2
-                    ? "bg-primary/55"
-                    : count >= 3
-                    ? "bg-primary/85"
-                    : "bg-primary"
+                    ? "bg-indigo-800 hover:bg-indigo-700"
+                    : count === 3
+                    ? "bg-indigo-600 hover:bg-indigo-500"
+                    : "bg-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.3)] hover:bg-indigo-300"
                 }`}
               />
             ))}
           </div>
-          <div className="flex items-center gap-1 mt-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5 mt-4 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
             <span>Less</span>
-            {[0, 1, 2, 3].map((l) => (
+            {[0, 1, 2, 3, 4].map((l) => (
               <div
                 key={l}
                 className={`w-3 h-3 rounded-sm ${
-                  l === 0 ? "bg-muted" : l === 1 ? "bg-primary/30" : l === 2 ? "bg-primary/55" : "bg-primary/85"
+                  l === 0
+                    ? "bg-slate-950 border border-white/5"
+                    : l === 1
+                    ? "bg-indigo-950 border border-indigo-900/30"
+                    : l === 2
+                    ? "bg-indigo-800"
+                    : l === 3
+                    ? "bg-indigo-600"
+                    : "bg-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.3)]"
                 }`}
               />
             ))}
@@ -296,14 +395,109 @@ export default function GoalsPage() {
         </CardContent>
       </Card>
 
+      {/* Milestone Badges */}
+      {(earnedBadges.length > 0 || nextBadge) && (
+        <Card className="bg-slate-900/40 border-white/5 shadow-md overflow-hidden">
+          <CardHeader className="pb-2 pt-4 px-5 border-b border-white/5">
+            <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <Trophy className="w-3.5 h-3.5 text-amber-400" /> Milestone Badges
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-5 py-4">
+            <div className="flex flex-wrap gap-3">
+              {MILESTONE_BADGES.map((b) => {
+                const earned = streak >= b.days;
+                return (
+                  <div
+                    key={b.days}
+                    title={earned ? `Earned! ${b.days}-day streak` : `${b.days - streak} more days to unlock`}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all ${
+                      earned
+                        ? `${b.bg} ${b.color} shadow-sm`
+                        : "bg-slate-950/50 border-white/5 text-slate-600 opacity-60 grayscale"
+                    }`}
+                  >
+                    <span className={earned ? "" : "opacity-40"}>{b.emoji}</span>
+                    {b.label}
+                    {earned && <Check className="w-3 h-3" />}
+                  </div>
+                );
+              })}
+            </div>
+            {nextBadge && (
+              <p className="text-[10px] text-slate-500 mt-3 font-medium">
+                <span className="text-white font-bold">{nextBadge.days - streak} more days</span> to unlock {nextBadge.emoji} {nextBadge.label}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Starter Packs (shown when user has < 2 goals) */}
+      {goals.length < 2 && (
+        <Card className="bg-gradient-to-br from-slate-900/60 via-indigo-950/30 to-slate-900/60 border border-indigo-500/20 shadow-xl rounded-2xl overflow-hidden">
+          <CardHeader className="pb-2 pt-5 px-5">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-indigo-500/15 border border-indigo-500/20 flex items-center justify-center">
+                <Zap className="w-4 h-4 text-indigo-400" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Starter Packs</p>
+                <p className="text-sm font-black text-white">Pick a pack to kickstart your routine</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              One click adds a curated set of daily habits designed to build momentum. You can edit or delete any after.
+            </p>
+          </CardHeader>
+          <CardContent className="px-5 pb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {PRESET_PACKS.map((pack) => (
+                <button
+                  key={pack.id}
+                  onClick={() => handleAddPack(pack)}
+                  className={`text-left p-4 rounded-xl border ${pack.borderColor} ${pack.bg} hover:scale-[1.02] active:scale-[0.98] transition-all group`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xl">{pack.emoji}</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-colors" />
+                  </div>
+                  <p className="text-sm font-bold text-white mb-1">{pack.label}</p>
+                  <ul className="space-y-0.5">
+                    {pack.goals.map((g) => (
+                      <li key={g.title} className="text-[10px] text-slate-400 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-slate-600 flex-shrink-0" />
+                        {g.title}
+                      </li>
+                    ))}
+                  </ul>
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Daily Goals */}
       <div className="space-y-4">
-        <h2 className="text-lg font-bold">Daily Goals</h2>
+        <h2 className="text-lg font-bold text-white tracking-wide uppercase text-xs">Daily Habits</h2>
         {dailyGoals.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center text-muted-foreground text-sm">
-              <Target className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              <p>No daily goals yet. Add some to build your routine!</p>
+          <Card className="bg-slate-900/40 border-white/5 shadow-md">
+            <CardContent className="py-10 text-center text-slate-500 text-sm space-y-3">
+              <Target className="w-10 h-10 mx-auto opacity-20" />
+              <div>
+                <p className="font-bold text-slate-400 text-base mb-1">No daily habits yet</p>
+                <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+                  Add habits above using a Starter Pack, quick-add a preset, or create a custom goal.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setShowAdd(true)}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1.5" /> Custom Goal
+              </Button>
             </CardContent>
           </Card>
         ) : (
@@ -320,7 +514,9 @@ export default function GoalsPage() {
                 <div
                   key={goal.id}
                   className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
-                    doneToday ? "border-emerald-200 bg-emerald-50 dark:border-emerald-900/30 dark:bg-emerald-900/10" : "border-border bg-card"
+                    doneToday
+                      ? "border-emerald-500/20 bg-emerald-500/5"
+                      : "border-white/5 bg-slate-950/40 hover:border-white/10"
                   }`}
                 >
                   <button
@@ -328,29 +524,31 @@ export default function GoalsPage() {
                     className={`w-7 h-7 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
                       doneToday
                         ? "border-emerald-500 bg-emerald-500 scale-110"
-                        : "border-muted-foreground/30 hover:border-primary"
+                        : "border-white/15 bg-white/5 hover:border-indigo-500"
                     }`}
                   >
                     {doneToday && <Check className="w-4 h-4 text-white" />}
                   </button>
                   <div className="flex-1">
-                    <p className={`font-medium text-sm ${doneToday ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                    <p className={`font-semibold text-sm ${doneToday ? "line-through text-slate-500" : "text-white"}`}>
                       {goal.title}
                     </p>
-                    <div className="flex items-center gap-1 mt-1">
+                    <div className="flex items-center gap-1.5 mt-1.5">
                       {streak7.reverse().map((done, i) => (
                         <div
                           key={i}
-                          className={`w-2.5 h-2.5 rounded-full ${done ? "bg-emerald-400" : "bg-muted"}`}
+                          className={`w-2.5 h-2.5 rounded-full ${
+                            done ? "bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.3)]" : "bg-slate-900 border border-white/5"
+                          }`}
                           title={format(subDays(new Date(), 6 - i), "MMM d")}
                         />
                       ))}
-                      <span className="text-xs text-muted-foreground ml-1">{recentStreak}/7 days</span>
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider ml-1.5">{recentStreak}/7 Days Consistency</span>
                     </div>
                   </div>
                   <button
                     onClick={() => handleDeleteGoal(goal.id)}
-                    className="p-1.5 text-muted-foreground/40 hover:text-destructive transition-colors rounded-lg"
+                    className="p-1.5 text-slate-500 hover:text-red-400 transition-colors rounded-lg hover:bg-white/5"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -364,7 +562,7 @@ export default function GoalsPage() {
       {/* Weekly Goals */}
       {weeklyGoals.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-bold">Weekly Goals</h2>
+          <h2 className="text-lg font-bold text-white tracking-wide uppercase text-xs">Weekly Targets</h2>
           <div className="space-y-2">
             {weeklyGoals.map((goal) => {
               const weekDates = Array.from({ length: 7 }, (_, i) =>
@@ -376,16 +574,16 @@ export default function GoalsPage() {
               const progress = Math.min((completedThisWeek / goal.targetCount) * 100, 100);
 
               return (
-                <div key={goal.id} className="p-4 rounded-xl border border-border bg-card space-y-2">
+                <div key={goal.id} className="p-4 rounded-xl border border-white/5 bg-slate-900/40 space-y-2.5 shadow-md">
                   <div className="flex items-center justify-between">
-                    <p className="font-medium text-sm text-foreground">{goal.title}</p>
+                    <p className="font-bold text-sm text-slate-200">{goal.title}</p>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {completedThisWeek}/{goal.targetCount}
+                      <span className="text-xs font-bold text-slate-400">
+                        {completedThisWeek}/{goal.targetCount} Complete
                       </span>
                       <button
                         onClick={() => handleDeleteGoal(goal.id)}
-                        className="p-1 text-muted-foreground/40 hover:text-destructive transition-colors"
+                        className="p-1 text-slate-500 hover:text-red-400 transition-colors rounded-lg hover:bg-white/5"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -399,73 +597,68 @@ export default function GoalsPage() {
         </div>
       )}
 
-      {/* Suggested goals */}
-      {dailyGoals.length < 3 && (
-        <Card className="border-dashed">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-muted-foreground">
-              Suggested Daily Goals
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {PRESET_DAILY_GOALS.filter(
-                (p) => !dailyGoals.some((g) => g.title.toLowerCase() === p.toLowerCase())
-              ).map((preset) => (
-                <button
-                  key={preset}
-                  onClick={async () => {
-                    if (!user) return;
-                    const id = await saveGoal(user.uid, {
-                      title: preset,
-                      type: "daily",
-                      targetCount: 1,
-                      completedDates: [],
-                    });
-                    setGoals((gs) => [
-                      ...gs,
-                      { id, uid: user.uid, title: preset, type: "daily", targetCount: 1, completedDates: [], createdAt: new Date().toISOString() },
-                    ]);
-                    toast.success(`"${preset}" added!`);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted hover:bg-primary/10 hover:text-primary text-xs font-medium transition-colors"
-                >
-                  <Plus className="w-3 h-3" />
-                  {preset}
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Quick Add Presets */}
+      {goals.length >= 2 && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Quick-Add More Habits</p>
+          <div className="flex flex-wrap gap-2">
+            {QUICK_ADD_GOALS.filter(
+              (p) => !goals.some((g) => g.title.toLowerCase() === p.toLowerCase())
+            ).map((preset) => (
+              <button
+                key={preset}
+                onClick={async () => {
+                  if (!user) return;
+                  const id = await saveGoal(user.uid, {
+                    title: preset,
+                    type: "daily",
+                    targetCount: 1,
+                    completedDates: [],
+                  });
+                  setGoals((gs) => [
+                    ...gs,
+                    { id, uid: user.uid, title: preset, type: "daily", targetCount: 1, completedDates: [], createdAt: new Date().toISOString() },
+                  ]);
+                  toast.success(`"${preset}" added!`);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-indigo-500/10 hover:text-indigo-400 text-xs font-semibold text-slate-400 border border-white/5 transition-all duration-200"
+              >
+                <Plus className="w-3 h-3 text-indigo-400" />
+                {preset}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Add Goal Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent>
+        <DialogContent className="bg-slate-900 border-white/5 rounded-2xl max-w-sm p-6 text-white">
           <DialogHeader>
-            <DialogTitle>Add New Goal</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-white">Add New Habit Goal</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Goal Title</Label>
+              <Label className="text-xs text-slate-400 font-semibold">Habit Title</Label>
               <Input
                 placeholder="e.g. Apply to 2 jobs"
                 value={newGoal.title}
                 onChange={(e) => setNewGoal((g) => ({ ...g, title: e.target.value }))}
                 onKeyDown={(e) => e.key === "Enter" && handleAddGoal()}
+                className="bg-slate-950 border-white/5 text-white rounded-xl focus:border-indigo-500/30"
                 autoFocus
               />
             </div>
             <div className="space-y-2">
-              <Label>Type</Label>
+              <Label className="text-xs text-slate-400 font-semibold">Frequency Type</Label>
               <Select
                 value={newGoal.type}
                 onValueChange={(v) => setNewGoal((g) => ({ ...g, type: v as "daily" | "weekly" }))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-slate-950 border-white/5 text-white rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-slate-900 border-white/5 text-white">
                   <SelectItem value="daily">Daily (repeat every day)</SelectItem>
                   <SelectItem value="weekly">Weekly (target per week)</SelectItem>
                 </SelectContent>
@@ -473,7 +666,7 @@ export default function GoalsPage() {
             </div>
             {newGoal.type === "weekly" && (
               <div className="space-y-2">
-                <Label>Weekly Target</Label>
+                <Label className="text-xs text-slate-400 font-semibold">Weekly Target Count</Label>
                 <Input
                   type="number"
                   min={1}
@@ -482,16 +675,17 @@ export default function GoalsPage() {
                   onChange={(e) =>
                     setNewGoal((g) => ({ ...g, targetCount: parseInt(e.target.value) || 1 }))
                   }
+                  className="bg-slate-950 border-white/5 text-white rounded-xl focus:border-indigo-500/30"
                 />
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAdd(false)}>
+          <DialogFooter className="flex gap-2 justify-end mt-4">
+            <Button variant="outline" onClick={() => setShowAdd(false)} className="border-white/10 hover:bg-white/5 text-white rounded-xl">
               Cancel
             </Button>
-            <Button onClick={handleAddGoal} disabled={saving || !newGoal.title.trim()}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add Goal"}
+            <Button onClick={handleAddGoal} disabled={saving || !newGoal.title.trim()} className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Track Habit"}
             </Button>
           </DialogFooter>
         </DialogContent>

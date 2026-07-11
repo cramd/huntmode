@@ -7,6 +7,49 @@ export type ApplicationStatus =
   | "rejected"
   | "withdrawn";
 
+export interface InterviewSection {
+  id: string;
+  icon: string;
+  title: string;
+  keywords: string[];
+  script: string;
+  completed: boolean;
+  order: number;
+}
+
+export interface InterviewPrepData {
+  sections: InterviewSection[];
+  notes?: string;
+  questions?: string[];
+  zoomLevel?: number;
+}
+
+export interface FitScoreBreakdown {
+  skills: number;
+  experience: number;
+  keywords: number;
+  culture: number;
+}
+
+export interface SimilarRole {
+  company: string;
+  role: string;
+  reason: string;
+  searchQuery: string;
+}
+
+export interface FitScore {
+  overall: number;
+  breakdown: FitScoreBreakdown;
+  strengths: string[];
+  gaps: string[];
+  suggestions: string[];
+  similarRoles: SimilarRole[];
+  generatedAt: string;
+}
+
+export type FitInsightCardType = "strengths" | "gaps" | "suggestions";
+
 export interface Application {
   id: string;
   uid: string;
@@ -26,6 +69,8 @@ export interface Application {
   location?: string;
   remote?: boolean;
   orgType?: OrgType;
+  interviewPrep?: InterviewPrepData;
+  fitScore?: FitScore;
 }
 
 export type OrgType = "startup" | "scaleup" | "enterprise" | "agency" | "consulting" | "nonprofit" | "government" | "other";
@@ -120,7 +165,21 @@ export interface UserProfile {
   lastActiveDate: string | null;
   aiProvider?: "openai" | "anthropic" | "google";
   aiApiKey?: string;
+  totalTokensUsed?: number;
+  totalEstimatedCostUsd?: number;
+  onboardingDismissedAt?: string;
   createdAt: string;
+}
+
+export type AccessRequestStatus = "pending" | "approved" | "denied";
+
+export interface AccessRequest {
+  uid: string;
+  email: string;
+  name: string;
+  status: AccessRequestStatus;
+  requestedAt: string;
+  updatedAt?: string;
 }
 
 export interface ActivityLog {

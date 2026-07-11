@@ -1,8 +1,10 @@
 import { NextRequest } from "next/server";
 import { generateText } from "ai";
-import { getModel } from "@/lib/ai";
+import { withModelFallback } from "@/lib/ai";
 import type { AIProvider } from "@/lib/ai";
 import type { ProjectEntry } from "@/lib/types";
+import { adminAuth } from "@/lib/firebase-admin";
+import { trackTokenUsage } from "@/lib/cost-tracker";
 
 export const runtime = "nodejs";
 
@@ -24,8 +26,26 @@ export async function POST(req: NextRequest) {
   if (file.type !== "application/pdf") {
     return Response.json({ error: "File must be a PDF" }, { status: 400 });
   }
-  if (!apiKey) {
-    return Response.json({ error: "No AI API key provided. Add your key in Settings." }, { status: 400 });
+
+  const authHeader = req.headers.get("authorization");
+  let userEmail = "";
+  let uid = "";
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.substring(7);
+    try {
+      const decoded = await adminAuth.verifyIdToken(token);
+      userEmail = decoded.email || "";
+      uid = decoded.uid || "";
+    } catch (err) {
+      console.error("[parse-resume] Auth verification failed:", err);
+    }
+  }
+
+  const isMarc = userEmail === "marcsherwood@gmail.com";
+  const apiKeyToUse = isMarc ? (apiKey || undefined) : apiKey;
+
+  if (!isMarc && (!apiKeyToUse || !apiKeyToUse.trim())) {
+    return Response.json({ error: "No AI API key provided. Please configure your own AI key in Settings." }, { status: 400 });
   }
 
   // Extract text from PDF
@@ -84,8 +104,13 @@ Rules:
 - Output ONLY the raw JSON object, nothing else`;
 
   try {
-    const model = getModel(provider, apiKey);
-    const { text } = await generateText({ model, prompt, maxOutputTokens: 4000 });
+    const { text, usage } = await withModelFallback(provider, apiKeyToUse, (model) =>
+      generateText({ model, prompt, maxOutputTokens: 4000, maxRetries: 1 })
+    );
+
+    if (uid && usage) {
+      await trackTokenUsage(uid, provider, usage.inputTokens || 0, usage.outputTokens || 0);
+    }
 
     // Strip any accidental markdown fences the model may add
     const cleaned = text

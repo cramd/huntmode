@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { UserProfile } from "@/lib/types";
 import {
   LayoutDashboard,
   Briefcase,
@@ -40,6 +44,20 @@ export default function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      setProfile(null);
+      return;
+    }
+    const unsub = onSnapshot(doc(db, "users", user.uid, "profile", "data"), (snap) => {
+      if (snap.exists()) {
+        setProfile(snap.data() as UserProfile);
+      }
+    });
+    return () => unsub();
+  }, [user?.uid]);
 
   const initials = user?.displayName
     ? user.displayName
@@ -51,7 +69,7 @@ export default function Sidebar({
     : "U";
 
   const containerClasses = cn(
-    "flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border",
+    "flex flex-col bg-sidebar/70 backdrop-blur-xl text-sidebar-foreground border-r border-sidebar-border/30",
     isMobile
       ? "h-full w-full"
       : cn(
@@ -64,14 +82,14 @@ export default function Sidebar({
     <aside className={containerClasses}>
       {/* Logo Section */}
       {isCollapsed && !isMobile ? (
-        <div className="flex flex-col items-center border-b border-sidebar-border py-4 gap-3">
-          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-sidebar-primary shrink-0">
-            <Zap className="w-5 h-5 text-sidebar-primary-foreground" />
+        <div className="flex flex-col items-center border-b border-sidebar-border/30 py-4 gap-3">
+          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20 shrink-0">
+            <Zap className="w-5 h-5 text-white" />
           </div>
           {onToggleCollapse && (
             <button
               onClick={onToggleCollapse}
-              className="p-1.5 rounded-lg text-sidebar-foreground/45 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+              className="p-1.5 rounded-lg text-sidebar-foreground/45 hover:text-sidebar-foreground hover:bg-white/5 transition-colors"
               title="Expand Sidebar"
             >
               <ChevronRight className="w-4 h-4" />
@@ -79,16 +97,16 @@ export default function Sidebar({
           )}
         </div>
       ) : (
-        <div className="flex items-center justify-between px-6 py-5 border-b border-sidebar-border">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-sidebar-border/30">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-sidebar-primary shrink-0">
-              <Zap className="w-5 h-5 text-sidebar-primary-foreground" />
+            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20 shrink-0">
+              <Zap className="w-5 h-5 text-white" />
             </div>
             <div>
               <p className="font-bold text-base text-sidebar-foreground tracking-tight leading-none">
                 HuntMode
               </p>
-              <p className="text-[10px] text-sidebar-foreground/50 mt-1.5">
+              <p className="text-[10px] text-sidebar-foreground/40 mt-1.5 font-medium">
                 Job Search HQ
               </p>
             </div>
@@ -96,7 +114,7 @@ export default function Sidebar({
           {!isMobile && onToggleCollapse && (
             <button
               onClick={onToggleCollapse}
-              className="p-1.5 rounded-lg text-sidebar-foreground/45 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+              className="p-1.5 rounded-lg text-sidebar-foreground/45 hover:text-sidebar-foreground hover:bg-white/5 transition-colors"
               title="Collapse Sidebar"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -121,8 +139,8 @@ export default function Sidebar({
                   ? "justify-center p-2.5 w-10 h-10 mx-auto"
                   : "gap-3 px-3 py-2.5",
                 active
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  ? "bg-gradient-to-r from-indigo-500/10 to-purple-500/5 border-l-2 border-indigo-500 text-white font-semibold"
+                  : "text-sidebar-foreground/60 hover:bg-white/5 hover:text-sidebar-foreground/90"
               )}
             >
               <Icon className="w-4.5 h-4.5 shrink-0" />
@@ -139,10 +157,10 @@ export default function Sidebar({
           onClick={onNavigate}
           title="New Application"
           className={cn(
-            "flex items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground hover:opacity-90 transition-opacity",
+            "flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-md shadow-indigo-500/10 hover:shadow-indigo-500/20 transition-all duration-200 hover:-translate-y-[1px]",
             isCollapsed && !isMobile
               ? "w-10 h-10 mx-auto"
-              : "gap-2 w-full py-2.5 px-4 text-sm font-semibold"
+              : "gap-2 w-full py-2.5 px-4 text-sm font-bold"
           )}
         >
           <Briefcase className="w-4 h-4 shrink-0" />
@@ -150,10 +168,22 @@ export default function Sidebar({
         </Link>
       </div>
 
+      {/* AI Cost Tracker */}
+      <div className={cn("py-3 border-t border-sidebar-border/30", isCollapsed && !isMobile ? "px-0 text-center flex justify-center" : "px-4")}>
+        <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-3 py-2 rounded-xl text-xs font-bold border border-emerald-500/20 shadow-inner">
+          <Zap className="w-3.5 h-3.5" />
+          {(!isCollapsed || isMobile) && (
+            <span>
+              AI Cost: ${profile?.totalEstimatedCostUsd ? profile.totalEstimatedCostUsd.toFixed(4) : "0.0000"}
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* User Section */}
       <div
         className={cn(
-          "border-t border-sidebar-border py-4",
+          "border-t border-sidebar-border/30 py-4",
           isCollapsed && !isMobile ? "px-0 text-center" : "px-4"
         )}
       >
@@ -163,25 +193,25 @@ export default function Sidebar({
             isCollapsed && !isMobile ? "flex-col gap-3" : "gap-3"
           )}
         >
-          <Avatar className="h-9 w-9 mx-auto">
+          <Avatar className="h-9 w-9 mx-auto border border-white/5">
             <AvatarImage src={user?.photoURL || undefined} />
-            <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-semibold">
+            <AvatarFallback className="bg-white/5 text-sidebar-foreground text-xs font-semibold">
               {initials}
             </AvatarFallback>
           </Avatar>
           {!isCollapsed || isMobile ? (
             <>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-sidebar-foreground truncate">
+                <p className="text-sm font-semibold text-sidebar-foreground truncate">
                   {user?.displayName || "User"}
                 </p>
-                <p className="text-xs text-sidebar-foreground/50 truncate">
+                <p className="text-[10px] text-sidebar-foreground/40 truncate">
                   {user?.email}
                 </p>
               </div>
               <button
                 onClick={logout}
-                className="p-1.5 rounded-lg text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                className="p-1.5 rounded-lg text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-white/5 transition-colors"
                 title="Sign out"
               >
                 <LogOut className="w-4 h-4" />
@@ -190,7 +220,7 @@ export default function Sidebar({
           ) : (
             <button
               onClick={logout}
-              className="p-2 rounded-lg text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors mx-auto"
+              className="p-2 rounded-lg text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-white/5 transition-colors mx-auto"
               title="Sign out"
             >
               <LogOut className="w-4 h-4" />

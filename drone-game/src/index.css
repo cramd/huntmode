@@ -1,0 +1,379 @@
+/* Cyberpunk Design System for Drone Commando */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap');
+
+:root {
+  /* Color Palettes */
+  --bg-darker: #020617;
+  --bg-dark: #0b1329;
+  --bg-panel: rgba(15, 23, 42, 0.65);
+  --border-color: rgba(99, 102, 241, 0.15);
+  
+  /* Neon glow colors */
+  --cyan-glow: #06b6d4;
+  --cyan-glow-rgb: 6, 182, 212;
+  --green-glow: #10b981;
+  --green-glow-rgb: 16, 185, 129;
+  --orange-glow: #f97316;
+  --orange-glow-rgb: 249, 115, 22;
+  --red-glow: #ef4444;
+  --red-glow-rgb: 239, 68, 68;
+  --indigo-glow: #6366f1;
+  --indigo-glow-rgb: 99, 102, 241;
+  --yellow-glow: #eab308;
+  --yellow-glow-rgb: 234, 179, 8;
+
+  /* Fonts */
+  --font-display: 'Orbitron', sans-serif;
+  --font-mono: 'Share Tech Mono', monospace;
+
+  font-family: var(--font-mono);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-darker);
+  color: #f1f5f9;
+  font-family: var(--font-mono);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  user-select: none;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom Scrollbar for Terminal */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.3);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.6);
+}
+
+/* Background Cyber Grid */
+.cyber-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(18, 24, 38, 0.6) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(18, 24, 38, 0.6) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center center;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.cyber-grid::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, transparent 20%, var(--bg-darker) 80%);
+  pointer-events: none;
+}
+
+/* Neon Glows */
+.cyan-glow {
+  text-shadow: 0 0 10px rgba(var(--cyan-glow-rgb), 0.6), 0 0 20px rgba(var(--cyan-glow-rgb), 0.3);
+}
+.green-glow {
+  text-shadow: 0 0 10px rgba(var(--green-glow-rgb), 0.6), 0 0 20px rgba(var(--green-glow-rgb), 0.3);
+}
+.orange-glow {
+  text-shadow: 0 0 10px rgba(var(--orange-glow-rgb), 0.6), 0 0 20px rgba(var(--orange-glow-rgb), 0.3);
+}
+.red-glow {
+  text-shadow: 0 0 10px rgba(var(--red-glow-rgb), 0.6), 0 0 20px rgba(var(--red-glow-rgb), 0.3);
+}
+.indigo-glow {
+  text-shadow: 0 0 10px rgba(var(--indigo-glow-rgb), 0.6), 0 0 20px rgba(var(--indigo-glow-rgb), 0.3);
+}
+
+/* Glass Panels */
+.glass-panel {
+  background: var(--bg-panel);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.3s ease;
+}
+
+.glass-panel:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(99, 102, 241, 0.05);
+}
+
+/* Custom Cyberpunk Buttons */
+.cyber-button {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--indigo-glow);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-weight: bold;
+  letter-spacing: 1px;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+}
+
+.cyber-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: all 0.5s ease;
+}
+
+.cyber-button:hover::before {
+  left: 100%;
+}
+
+.cyber-button:hover {
+  background: var(--indigo-glow);
+  box-shadow: 0 0 15px rgba(var(--indigo-glow-rgb), 0.5);
+  transform: translateY(-1px);
+}
+
+.cyber-button:active {
+  transform: translateY(1px);
+}
+
+.cyber-button.cyan {
+  border-color: var(--cyan-glow);
+}
+.cyber-button.cyan:hover {
+  background: var(--cyan-glow);
+  box-shadow: 0 0 15px rgba(var(--cyan-glow-rgb), 0.5);
+  color: #000;
+}
+
+.cyber-button.green {
+  border-color: var(--green-glow);
+}
+.cyber-button.green:hover {
+  background: var(--green-glow);
+  box-shadow: 0 0 15px rgba(var(--green-glow-rgb), 0.5);
+  color: #000;
+}
+
+.cyber-button.orange {
+  border-color: var(--orange-glow);
+}
+.cyber-button.orange:hover {
+  background: var(--orange-glow);
+  box-shadow: 0 0 15px rgba(var(--orange-glow-rgb), 0.5);
+  color: #000;
+}
+
+.cyber-button.red {
+  border-color: var(--red-glow);
+}
+.cyber-button.red:hover {
+  background: var(--red-glow);
+  box-shadow: 0 0 15px rgba(var(--red-glow-rgb), 0.5);
+}
+
+/* CRT Screen Scanline Overlay */
+.crt-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  background-size: 100% 4px, 6px 100%;
+  z-index: 999;
+  pointer-events: none;
+}
+
+.crt-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, transparent 60%, rgba(0, 0, 0, 0.4) 100%);
+  pointer-events: none;
+}
+
+/* Animations */
+@keyframes crt-flicker {
+  0% { opacity: 0.985; }
+  50% { opacity: 0.995; }
+  100% { opacity: 0.985; }
+}
+
+.crt-flicker {
+  animation: crt-flicker 0.15s infinite;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.scanline::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 4px;
+  background: rgba(99, 102, 241, 0.1);
+  animation: scanline 6s linear infinite;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+/* Title Font Styling */
+.display-font {
+  font-family: var(--font-display);
+}
+
+/* Game Interface Layouts */
+.game-container {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100vh;
+  padding: 16px;
+  gap: 16px;
+  background: #020617;
+  overflow: hidden;
+  position: relative;
+}
+
+.game-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 12px;
+}
+
+.canvas-wrapper {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: #040815;
+}
+
+.canvas-wrapper canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.sidebar-panel {
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+/* Stat Grid items */
+.stat-box {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  background: rgba(30, 41, 59, 0.3);
+  border-left: 3px solid var(--indigo-glow);
+  border-radius: 0 4px 4px 0;
+}
+
+.stat-box.cyan { border-left-color: var(--cyan-glow); }
+.stat-box.green { border-left-color: var(--green-glow); }
+.stat-box.orange { border-left-color: var(--orange-glow); }
+.stat-box.red { border-left-color: var(--red-glow); }
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: bold;
+  margin-top: 4px;
+}
+
+/* Progress bar styling */
+.health-bar-container {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.health-bar {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.health-bar.green { background: var(--green-glow); box-shadow: 0 0 8px rgba(var(--green-glow-rgb), 0.5); }
+.health-bar.yellow { background: var(--yellow-glow); box-shadow: 0 0 8px rgba(var(--yellow-glow-rgb), 0.5); }
+.health-bar.red { background: var(--red-glow); box-shadow: 0 0 8px rgba(var(--red-glow-rgb), 0.5); }
+
+/* Combat log terminal */
+.terminal-log {
+  flex: 1;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.terminal-line {
+  display: flex;
+  gap: 8px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.terminal-time {
+  color: rgba(99, 102, 241, 0.6);
+  flex-shrink: 0;
+}
+
+.terminal-msg {
+  word-break: break-all;
+}
+
+.terminal-msg.system { color: #94a3b8; }
+.terminal-msg.defense { color: var(--cyan-glow); }
+.terminal-msg.offense { color: var(--orange-glow); }
+.terminal-msg.danger { color: var(--red-glow); }
+.terminal-msg.success { color: var(--green-glow); }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

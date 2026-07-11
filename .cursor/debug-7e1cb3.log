@@ -1,2 +1,0 @@
-{"sessionId":"7e1cb3","location":"[id]/page.tsx:handleRegenerate:entry","message":"regen called","data":{"type":"cv","hasMasterResume":true,"jdLen":4063,"hasApiKey":true,"provider":"google","appLoaded":true},"hypothesisId":"H-A,H-B,H-C,H-E","timestamp":1779763957410}
-{"sessionId":"7e1cb3","location":"[id]/page.tsx:handleRegenerate:entry","message":"regen called","data":{"type":"cl","hasMasterResume":true,"jdLen":4063,"hasApiKey":true,"provider":"google","appLoaded":true},"hypothesisId":"H-A,H-B,H-C,H-E","timestamp":1779769055024}

@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
-import { generateDocument } from "@/lib/ai";
+import { streamTextWithFallback, formatAIError, buildCVPrompt, buildCoverLetterPrompt } from "@/lib/ai";
 import type { AIProvider } from "@/lib/ai";
+import { adminAuth } from "@/lib/firebase-admin";
+import { trackTokenUsage } from "@/lib/cost-tracker";
 
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
@@ -23,6 +25,28 @@ export async function POST(req: NextRequest) {
     apiKey?: string;
   };
 
+  const authHeader = req.headers.get("authorization");
+  let userEmail = "";
+  let uid = "";
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.substring(7);
+    try {
+      const decoded = await adminAuth.verifyIdToken(token);
+      userEmail = decoded.email || "";
+      uid = decoded.uid || "";
+    } catch (err) {
+      console.error("[generate] Auth verification failed:", err);
+    }
+  }
+
+  const isMarc = userEmail === "marcsherwood@gmail.com";
+  if (!isMarc && (!apiKey || !apiKey.trim())) {
+    return new Response(
+      JSON.stringify({ error: "No AI API key provided. Please configure your own AI key in Settings." }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   console.log("[generate] provider:", provider, "type:", type,
     "jd length:", jobDescription?.length ?? 0,
     "resume length:", masterResume?.length ?? 0);
@@ -43,34 +67,37 @@ export async function POST(req: NextRequest) {
   const docType = (type === "cv" || type === "cover_letter") ? type : "cv";
 
   try {
-    const result = await generateDocument({
-      jobDescription,
-      masterResume,
-      role: role || "this role",
-      company: company || "the company",
-      type: docType,
+    const prompt =
+      docType === "cv"
+        ? buildCVPrompt({
+            jobDescription,
+            masterResume,
+            role: role || "this role",
+            company: company || "the company",
+            type: docType,
+          })
+        : buildCoverLetterPrompt({
+            jobDescription,
+            masterResume,
+            role: role || "this role",
+            company: company || "the company",
+            type: docType,
+          });
+
+    const { text: fullText, inputTokens, outputTokens } = await streamTextWithFallback({
       provider: (provider as AIProvider) || "openai",
       apiKey,
+      prompt,
     });
 
-    // Consume the text stream into chunks so we can catch provider errors
-    // (streamText returns lazily — errors only surface when reading the stream)
-    const reader = result.textStream;
-    const chunks: string[] = [];
-    try {
-      for await (const chunk of reader) {
-        chunks.push(chunk);
+    if (uid) {
+      try {
+        await trackTokenUsage(uid, (provider as AIProvider) || "openai", inputTokens, outputTokens);
+      } catch (usageErr) {
+        console.error("Failed to track token usage:", usageErr);
       }
-    } catch (streamErr: unknown) {
-      console.error("AI stream error:", streamErr);
-      const msg = streamErr instanceof Error ? streamErr.message : "AI generation failed during streaming";
-      return new Response(JSON.stringify({ error: msg }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
     }
 
-    const fullText = chunks.join("");
     if (!fullText.trim()) {
       return new Response(JSON.stringify({ error: "AI returned empty response. Check your API key and try again." }), {
         status: 500,
@@ -85,7 +112,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: unknown) {
     console.error("AI generation error:", err);
-    const message = err instanceof Error ? err.message : "AI generation failed";
+    const message = formatAIError(err);
     return new Response(JSON.stringify({ error: message }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 }

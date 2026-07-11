@@ -22,25 +22,19 @@ Your ADHD-friendly job search command center. Track applications, generate AI-ta
 
 ### 2. Environment Variables
 
-Copy `.env.local` and fill in your values:
+Create a `.env.local` file by copying the example template:
 
 ```bash
-# Firebase Web Config
-NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
-NEXT_PUBLIC_FIREBASE_APP_ID=
+cp .env.example .env.local
+```
 
-# Firebase Admin (for API routes)
-# Firebase Console → Project Settings → Service Accounts → Generate new private key
-FIREBASE_ADMIN_CLIENT_EMAIL=
-FIREBASE_ADMIN_PRIVATE_KEY=
+Fill in all the required variables inside `.env.local`. Note that `RESEND_API_KEY` is optional; if left blank, admin login approval URLs will print directly to the server logs for easy local testing.
 
-# AI Provider (add key for your chosen provider)
-OPENAI_API_KEY=
-ANTHROPIC_API_KEY=
+Optional PostHog analytics (client-side):
+
+```env
+NEXT_PUBLIC_POSTHOG_KEY=phc_your_project_token
+NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
 ```
 
 ### 3. Deploy Firestore Rules
@@ -51,13 +45,76 @@ npx firebase-tools@latest use --add <YOUR_PROJECT_ID>
 npx firebase-tools@latest deploy --only firestore:rules
 ```
 
-### 4. Run
+### 4. Run Locally
 
 ```bash
+npm install
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+---
+
+## 🐳 Self-Hosting & Deployment Options
+
+### Option A: Docker & Docker Compose (Recommended for Self-Hosting)
+
+A production-grade `Dockerfile` and `docker-compose.yml` are included in the repository root for simplified deployments:
+
+1. Copy and configure your environment variables:
+   ```bash
+   cp .env.example .env.local
+   ```
+2. Build and launch the container in the background:
+   ```bash
+   docker compose up -d --build
+   ```
+The application will be accessible at `http://localhost:3000`.
+
+### 🐳 Publishing & Using Pre-Built Images (Docker Hub)
+
+If you want to build and publish the image to your own **Docker Hub** page so others can run it without cloning the source code:
+
+1. **Log in to Docker Hub**:
+   ```bash
+   docker login
+   ```
+2. **Build and Tag the Image** (replace `YOUR_DOCKERHUB_USERNAME` with your actual username):
+   ```bash
+   docker build -t YOUR_DOCKERHUB_USERNAME/huntmode:latest .
+   ```
+3. **Push to Docker Hub**:
+   ```bash
+   docker push YOUR_DOCKERHUB_USERNAME/huntmode:latest
+   ```
+
+#### Running the Pre-Built Image
+Once pushed, anyone can run your application using just a `docker-compose.yml` file and a `.env.local` file without downloading the rest of the source files. 
+
+They can replace the `build:` block in `docker-compose.yml` with the image name:
+```yaml
+services:
+  huntmode:
+    image: YOUR_DOCKERHUB_USERNAME/huntmode:latest
+    container_name: huntmode-app
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local
+```
+
+### Option B: Bare-Metal VPS (PM2 & Nginx)
+
+If deploying to a VPS without Docker, you can configure local build syncing to avoid CPU/RAM overhead on small server hardware (built on top of your local Mac/PC):
+
+1. Configure your local `deploy.sh` script with your server IP and directory credentials.
+2. Run the deployment script to compile locally and sync the production-ready build:
+   ```bash
+   ./deploy.sh
+   ```
+This installs dependencies and automatically starts/restarts the process under `pm2`.
 
 ## Stack
 

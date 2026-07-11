@@ -1,0 +1,37 @@
+import { adminDb } from "@/lib/firebase-admin";
+import { getSignupRateLimitStatus } from "@/lib/signup-rate-limit";
+
+export type SignupStats = {
+  totalUsers: number;
+  approved: number;
+  denied: number;
+  pending: number;
+  signupsThisHour: number;
+  signupLimit: number;
+  slotsRemaining: number;
+  windowResetsAt: string;
+};
+
+export async function getSignupStats(): Promise<SignupStats> {
+  const snapshot = await adminDb.collection("accessRequests").get();
+  let approved = 0;
+  let denied = 0;
+  let pending = 0;
+
+  for (const doc of snapshot.docs) {
+    const status = doc.data().status;
+    if (status === "approved") approved += 1;
+    else if (status === "denied") denied += 1;
+    else if (status === "pending") pending += 1;
+  }
+
+  const rate = await getSignupRateLimitStatus();
+
+  return {
+    totalUsers: snapshot.size,
+    approved,
+    denied,
+    pending,
+    ...rate,
+  };
+}

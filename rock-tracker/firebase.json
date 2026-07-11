@@ -1,0 +1,6 @@
+{
+  "apphosting": {
+    "backendId": "rock-tracker",
+    "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log", "functions"]
+  }
+}
