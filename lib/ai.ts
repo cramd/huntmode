@@ -198,6 +198,47 @@ Scoring guidelines:
 Be honest — a score of 60 is not bad, it is useful information. Do not inflate scores.`;
 }
 
+export function buildOnboardingSuggestPrompt(params: {
+  resumeText: string;
+  targetRoles: string[];
+  industry: string;
+}): string {
+  const rolesLine =
+    params.targetRoles.length > 0
+      ? params.targetRoles.join(", ")
+      : "Not specified — infer from resume";
+  const industryLine = params.industry.trim() || "Not specified — infer from resume";
+
+  return `You are an expert career coach helping a job seeker start their hunt with paint-by-numbers draft targets.
+
+CANDIDATE RESUME (may be empty if they skipped upload):
+${params.resumeText.slice(0, 6000) || "(No resume uploaded yet)"}
+
+TARGET ROLES THEY WANT: ${rolesLine}
+TARGET INDUSTRY: ${industryLine}
+
+Return ONLY a valid JSON object — no markdown fences — with exactly 3 draft role suggestions:
+{
+  "drafts": [
+    {
+      "company": "<real or realistic company name>",
+      "role": "<specific job title>",
+      "reason": "<1 sentence why this fits their background and stated mission>",
+      "searchQuery": "<Google-ready search e.g. \\"Senior Platform Engineer\\" site:greenhouse.io>",
+      "briefJd": "<4-6 bullet sketch of a plausible job description they could tailor to — responsibilities, stack, and outcomes>"
+    }
+  ]
+}
+
+Rules:
+- Return exactly 3 drafts, no more, no less
+- Mix their stated target roles with smart adjacent fits from their CV
+- Prefer realistic companies (mix of well-known and mid-size; not all FAANG)
+- briefJd should read like a real posting outline so they can generate a CV against it later
+- searchQuery should help them find a live posting
+- Do not use corporate trial / enterprise pipeline jargon`;
+}
+
 export async function generateDocument(params: GenerateParams) {
   const prompt = params.type === "cv"
     ? buildCVPrompt(params)
@@ -313,7 +354,7 @@ export function buildIncorporateFitPrompt(params: {
         ? `Address these GAPS by surfacing any related experience, skills, or achievements from the MASTER RESUME that partially or fully cover them. Rephrase and reposition existing content to better match the job requirements. Do NOT fabricate skills, roles, certifications, or metrics that are not in the master resume. If a gap cannot be truthfully addressed, leave it unmentioned rather than inventing content.`
         : `Apply these SUGGESTIONS as specific edits to the CV. Implement each actionable tweak that can be done truthfully using content from the master resume. Do NOT add fabricated experience or skills.`;
 
-  return `You are an expert resume writer. Revise the candidate's tailored CV below to incorporate fit-analysis insights for a specific job application.
+  return `You are an expert resume writer. Produce ADDITIVE content only to enrich a tailored CV with fit-analysis insights. Do NOT rewrite or replace the existing CV.
 
 JOB TITLE: ${params.role}
 COMPANY: ${params.company}
@@ -324,7 +365,7 @@ ${params.jobDescription.slice(0, 6000)}
 MASTER RESUME (source of truth — do not invent beyond this):
 ${params.masterResume.slice(0, 4000)}
 
-CURRENT TAILORED CV:
+CURRENT TAILORED CV (already written — leave it intact; your output will be APPENDED after it):
 ${params.currentCV}
 
 ${cardLabel.toUpperCase()} TO INCORPORATE:
@@ -332,10 +373,12 @@ ${itemsList}
 
 Instructions:
 - ${cardInstructions}
-- Preserve the overall structure and markdown format of the current CV
-- Keep all truthful content from the current CV unless improving phrasing
-- Mirror relevant keywords from the job description where supported by real experience
-- Output the COMPLETE revised CV in clean markdown — not a diff, not commentary, not a preamble
+- Output ONLY new markdown to append — bullets, short paragraphs, or a small subsection
+- Do NOT output the existing CV, a full rewrite, a preamble, or commentary
+- Do NOT omit, restate, or replace content already in the current CV
+- Base every addition on the master resume; never invent experience, skills, or metrics
+- Mirror relevant job-description keywords only where supported by real experience
+- Keep the addition concise (roughly 4–12 bullets or equivalent)
 - Do NOT wrap the output in code fences`;
 }
 

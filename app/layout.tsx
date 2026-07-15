@@ -18,8 +18,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HuntMode | AI Job Application Assistant",
-  description: "An open source AI job application assistant providing free BYOK AI-powered resume tailoring, cover letter generation, and application tracking. Your API keys remain 100% locally secure.",
+  title: "HuntMode | Interview Prep HUD",
+  description:
+    "Paste your CV and the job description. Get a live interview HUD you can read while you talk. Free forever · BYOK · résumé and JD stay on your machine.",
+  icons: {
+    icon: "/huntmode-logo.png",
+    apple: "/huntmode-logo.png",
+  },
 };
 
 export default function RootLayout({

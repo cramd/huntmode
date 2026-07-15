@@ -1,0 +1,45 @@
+{
+  "profile": {
+    "name": "Rod Allen",
+    "email": "famallen8@gmail.com",
+    "targetRoles": [
+      "Enterprise Solutions Architect",
+      "Revenue Operations Leader",
+      "Head of Marketing Operations"
+    ],
+    "targetIndustry": "Enterprise B2B SaaS & GTM Technology",
+    "targetRole": "Enterprise Solutions Architect, Revenue Operations Leader, Head of Marketing Operations"
+  },
+  "applications": [
+    {
+      "company": "Workato",
+      "role": "Principal Solutions Architect — Enterprise GTM",
+      "status": "draft",
+      "orgType": "scaleup",
+      "location": "Remote",
+      "remote": true,
+      "jobDescription": "Lead enterprise GTM integration architecture for Fortune 500 and high-growth technology customers.\n\n- Design scalable Workato recipes connecting Salesforce, Marketo, Adobe Workfront, and adjacent revenue systems\n- Partner with sales engineering and customer success on complex multi-system deployments\n- Translate RevOps and Marketing Ops requirements into production-grade automation patterns\n- Advise customers on data governance, lead lifecycle design, and executive reporting architecture\n- Support pre-sales technical discovery and proof-of-concept builds for enterprise accounts\n\nIdeal background: deep Salesforce + Marketo experience, hands-on Workato delivery, and global GTM operations leadership.",
+      "notes": "Strong fit: Rod architects Workato-based GTM ecosystems today at MERGE and scaled global marketing ops at Neo4j.\n\nSearch: \"Principal Solutions Architect\" Workato enterprise site:greenhouse.io OR site:workato.com/careers"
+    },
+    {
+      "company": "Clari",
+      "role": "Director of Revenue Operations",
+      "status": "draft",
+      "orgType": "scaleup",
+      "location": "Remote",
+      "remote": true,
+      "jobDescription": "Own revenue operations strategy and systems for a high-growth B2B SaaS revenue platform company.\n\n- Build forecast hygiene, pipeline analytics, and executive visibility across sales and marketing\n- Partner with Sales, Marketing, and Finance on territory design, funnel definitions, and lifecycle reporting\n- Administer and optimize Salesforce architecture supporting global revenue teams\n- Drive cross-functional GTM process improvements from lead capture through closed-won\n- Establish data governance standards and self-serve analytics for revenue leaders\n\nIdeal background: 10+ years RevOps leadership, Salesforce power user, and experience scaling ops through hypergrowth.",
+      "notes": "Strong fit: Rod built inaugural revenue models, SFDC reporting, and full-funnel lifecycle programs at MariaDB and Neo4j.\n\nSearch: \"Director Revenue Operations\" Clari remote site:greenhouse.io"
+    },
+    {
+      "company": "Adobe",
+      "role": "Senior Solutions Consultant — Marketo Engage",
+      "status": "draft",
+      "orgType": "enterprise",
+      "location": "Remote",
+      "remote": true,
+      "jobDescription": "Guide enterprise customers implementing and optimizing Adobe Marketo Engage within complex GTM stacks.\n\n- Lead technical discovery and solution design for enterprise marketing automation programs\n- Architect lead routing, scoring, nurture, and attribution models across Salesforce and Marketo\n- Support global marketing operations teams on program execution, data quality, and reporting\n- Deliver best-practice recommendations for scalable marketing ops in regulated and high-volume environments\n- Collaborate with professional services and customer success on multi-region rollouts\n\nIdeal background: Marketo Certified Expert, enterprise marketing ops leadership, and Salesforce integration experience.",
+      "notes": "Strong fit: Marketo Certified Expert with Neo4j/MariaDB global marketing ops leadership and SFDC integration depth.\n\nSearch: \"Marketo Engage\" \"Solutions Consultant\" Adobe remote site:adobe.com/careers"
+    }
+  ]
+}

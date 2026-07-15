@@ -28,6 +28,7 @@ import {
   Lightbulb,
   Search,
   RefreshCw,
+  Undo2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -68,6 +69,12 @@ import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { useCompletion } from "@ai-sdk/react";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
+import {
+  appendFitInsights,
+  FIT_CARD_LABELS,
+  popUndoSnapshot,
+  pushUndoSnapshot,
+} from "@/lib/undo-stack";
 
 export function getCategoryIcon(iconName: string) {
   switch (iconName) {
@@ -114,7 +121,11 @@ export default function ApplicationDetailPage() {
   const [incorporatingCard, setIncorporatingCard] = useState<FitInsightCardType | null>(null);
   const [liveSearchLoading, setLiveSearchLoading] = useState<string | null>(null);
   const [liveSearchResults, setLiveSearchResults] = useState<Record<string, { title: string; url: string; snippet: string }[]>>({});
+  const [cvUndoStack, setCvUndoStack] = useState<string[]>([]);
+  const [clUndoStack, setClUndoStack] = useState<string[]>([]);
   const completionRef = useRef<string>("");
+  const docSnapshotRef = useRef({ cv: "", cl: "" });
+
   const { complete: generateDoc, completion, isLoading: genLoading } = useCompletion({
     api: "/api/generate",
     streamProtocol: "text",
@@ -124,8 +135,17 @@ export default function ApplicationDetailPage() {
       const text = (result && result.trim()) ? result : completionRef.current;
       if (type && user && id && text) {
         const field = type === "cv" ? "generatedCV" : "generatedCoverLetter";
+        const previous = type === "cv" ? docSnapshotRef.current.cv : docSnapshotRef.current.cl;
+        if (previous.trim()) {
+          if (type === "cv") setCvUndoStack((s) => pushUndoSnapshot(s, previous));
+          else setClUndoStack((s) => pushUndoSnapshot(s, previous));
+        }
         setEditForm((f) => ({ ...f, [field]: text }));
         setApp((a) => a ? { ...a, [field]: text } : null);
+        docSnapshotRef.current = {
+          ...docSnapshotRef.current,
+          [type === "cv" ? "cv" : "cl"]: text,
+        };
         try {
           await updateApplication(user.uid, id, { [field]: text });
           captureEvent(AnalyticsEvents.DOCUMENT_GENERATED, { type });
@@ -156,12 +176,49 @@ export default function ApplicationDetailPage() {
     if (!user || !id) return;
     getApplication(user.uid, id).then((a) => {
       setApp(a);
-      if (a) setEditForm(a);
+      if (a) {
+        setEditForm(a);
+        docSnapshotRef.current = {
+          cv: a.generatedCV || "",
+          cl: a.generatedCoverLetter || "",
+        };
+      }
       if (a?.resumeUsed) getMasterResume(user.uid, a.resumeUsed).then(setMasterResume);
       getUserProfile(user.uid).then(setUserProfile);
       setLoading(false);
     });
   }, [user, id]);
+
+  useEffect(() => {
+    docSnapshotRef.current = {
+      cv: editForm.generatedCV ?? app?.generatedCV ?? "",
+      cl: editForm.generatedCoverLetter ?? app?.generatedCoverLetter ?? "",
+    };
+  }, [editForm.generatedCV, editForm.generatedCoverLetter, app?.generatedCV, app?.generatedCoverLetter]);
+
+  const pushDocUndo = (target: "cv" | "cl", previous: string) => {
+    if (!previous.trim()) return;
+    if (target === "cv") setCvUndoStack((s) => pushUndoSnapshot(s, previous));
+    else setClUndoStack((s) => pushUndoSnapshot(s, previous));
+  };
+
+  const handleUndoDocument = async (target: "cv" | "cl") => {
+    if (!user || !id) return;
+    const field = target === "cv" ? "generatedCV" : "generatedCoverLetter";
+    const stack = target === "cv" ? cvUndoStack : clUndoStack;
+    const { next, snapshot } = popUndoSnapshot(stack);
+    if (snapshot === null) return;
+    if (target === "cv") setCvUndoStack(next);
+    else setClUndoStack(next);
+    setEditForm((f) => ({ ...f, [field]: snapshot }));
+    setApp((a) => (a ? { ...a, [field]: snapshot } : null));
+    try {
+      await updateApplication(user.uid, id, { [field]: snapshot });
+      toast.success("Restored previous version");
+    } catch {
+      toast.error("Undo restored locally but failed to save");
+    }
+  };
 
   const handleSave = async () => {
     if (!user || !id || !app) return;
@@ -228,10 +285,13 @@ export default function ApplicationDetailPage() {
   const handleSaveDocument = async (target: "cv" | "cl") => {
     if (!user || !id) return;
     const field = target === "cv" ? "generatedCV" : "generatedCoverLetter";
+    const previous = target === "cv" ? (app?.generatedCV || "") : (app?.generatedCoverLetter || "");
+    const nextVal = editForm[field] || "";
+    if (previous !== nextVal) pushDocUndo(target, previous);
     setSavingDoc(target);
     try {
-      await updateApplication(user.uid, id, { [field]: editForm[field] });
-      setApp((a) => (a ? { ...a, [field]: editForm[field] || "" } : null));
+      await updateApplication(user.uid, id, { [field]: nextVal });
+      setApp((a) => (a ? { ...a, [field]: nextVal } : null));
       toast.success(`${target === "cv" ? "CV" : "Cover letter"} saved`);
     } catch {
       toast.error("Failed to save");
@@ -332,6 +392,8 @@ export default function ApplicationDetailPage() {
         s.certifications && `## Certifications\n${s.certifications}`,
       ].filter(Boolean).join("\n\n");
       const field = target === "cv" ? "generatedCV" : "generatedCoverLetter";
+      const previous = target === "cv" ? (app?.generatedCV || editForm.generatedCV || "") : (app?.generatedCoverLetter || editForm.generatedCoverLetter || "");
+      pushDocUndo(target, previous);
       setEditForm((f) => ({ ...f, [field]: text }));
       setApp((a) => a ? { ...a, [field]: text } : null);
       await updateApplication(user.uid, id, { [field]: text });
@@ -555,12 +617,16 @@ export default function ApplicationDetailPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update CV");
 
-      setEditForm((f) => ({ ...f, generatedCV: data.text }));
-      setApp((a) => (a ? { ...a, generatedCV: data.text } : null));
-      await updateApplication(user.uid, id, { generatedCV: data.text });
+      const additive = typeof data.text === "string" ? data.text : "";
+      const cardLabel = FIT_CARD_LABELS[cardKey] || cardKey;
+      const merged = appendFitInsights(currentCV, additive, cardLabel);
+      pushDocUndo("cv", currentCV);
+      setEditForm((f) => ({ ...f, generatedCV: merged }));
+      setApp((a) => (a ? { ...a, generatedCV: merged } : null));
+      await updateApplication(user.uid, id, { generatedCV: merged });
       captureEvent(AnalyticsEvents.FIT_INCORPORATED, { card_type: cardKey });
       setActiveTab("cv");
-      toast.success(`${FIT_CARD_TITLES[cardKey]} incorporated into your CV`);
+      toast.success(`${cardLabel} appended to your CV — Undo available if needed`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to update CV";
       toast.error(msg);
@@ -918,6 +984,17 @@ export default function ApplicationDetailPage() {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => handleUndoDocument("cv")}
+                        disabled={cvUndoStack.length === 0}
+                        className="h-8 px-2 border-white/10 hover:bg-white/5 text-slate-400 hover:text-white rounded-lg text-[10px] font-bold gap-1 disabled:opacity-40"
+                        title="Undo last CV change"
+                      >
+                        <Undo2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Undo</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleCopy("cv")}
                         disabled={!getDocumentText("cv")}
                         className="h-8 w-8 p-0 border-white/10 hover:bg-white/5 text-slate-400 hover:text-white rounded-lg"
@@ -1093,6 +1170,17 @@ export default function ApplicationDetailPage() {
                           <span className="hidden sm:inline">Save</span>
                         </Button>
                       )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUndoDocument("cl")}
+                        disabled={clUndoStack.length === 0}
+                        className="h-8 px-2 border-white/10 hover:bg-white/5 text-slate-400 hover:text-white rounded-lg text-[10px] font-bold gap-1 disabled:opacity-40"
+                        title="Undo last cover letter change"
+                      >
+                        <Undo2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Undo</span>
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"

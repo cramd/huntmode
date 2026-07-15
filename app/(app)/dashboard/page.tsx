@@ -255,7 +255,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Getting Started card — shown for new users who haven't dismissed it */}
-      {!onboardingDismissed && !profile?.onboardingDismissedAt && applications.length === 0 && (
+      {!onboardingDismissed &&
+        !profile?.onboardingDismissedAt &&
+        !profile?.onboardingCompletedAt &&
+        applications.length === 0 && (
         <GettingStartedCard
           user={{ uid: user!.uid }}
           profile={profile}

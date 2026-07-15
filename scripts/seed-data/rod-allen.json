@@ -1,0 +1,25 @@
+{
+  "profile": {
+    "name": "Rod Allen",
+    "email": "famallen8@gmail.com",
+    "targetRoles": [
+      "Enterprise Solutions Architect",
+      "Revenue Operations Leader",
+      "Head of Marketing Operations"
+    ],
+    "targetIndustry": "Enterprise B2B SaaS & GTM Technology",
+    "targetRole": "Enterprise Solutions Architect, Revenue Operations Leader, Head of Marketing Operations"
+  },
+  "resume": {
+    "name": "Master Resume",
+    "category": "revenue_ops",
+    "sections": {
+      "summary": "Strategic Revenue Operations leader with over 17 years of dedicated experience architecting and scaling global Go-To-Market (GTM) operations for enterprise organizations and high-growth technology companies. Recognized expert in translating complex business challenges into streamlined revenue systems, fostering executive visibility, and driving operational efficiency. Proven track record of leading cross-functional initiatives spanning Sales, Marketing, and Executive Leadership to align teams through scalable processes and advanced CRM architecture. Hands-on technical expert in enterprise GTM technology ecosystems, including deep proficiency in Salesforce, Adobe Marketo Engage, and Workato integrations.\n\nBoise, Idaho, United States | famallen8@gmail.com | LinkedIn: www.linkedin.com/in/rod-a-0aa5596",
+      "experience": "**MERGE** | Solutions Architect Jeto | Boise, ID | February 2023 - Present\n- Direct enterprise Revenue Operations and Go-To-Market (GTM) transformation initiatives, optimizing system architecture for Fortune 500 and high-growth technology clients.\n- Architect and deliver highly scalable, enterprise-grade marketing automation solutions designed to support complex, global organizational structures.\n- Engineer unified GTM ecosystems by utilizing Workato to seamlessly integrate Salesforce, Marketo, Adobe Workfront, Asana, AddEvent, and other critical business systems.\n\n**Neo4j** | Head of Global Marketing Operations and Automation | Boise, Idaho | April 2018 - February 2023\n- Scaled global operations coverage from a strict North American focus to four distinct global regions by architecting a fully automated program submission and execution system.\n- Drove massive database scaling, successfully managing the customer database growth from 400,000 to 1.5 million records while strictly maintaining data quality and integrity.\n- Designed and deployed cross-object, multi-level Salesforce (SFDC) reporting structures backed by extensive executive dashboards.\n- Enabled org-wide, self-serve access to analytics, facilitating up-to-the-minute, data-driven decision-making across the company.\n\n**MariaDB Corporation** | Head of Global Sales & Marketing Operations | Boise, Idaho Area | March 2011 - April 2018\n- Spearheaded foundational organizational alignment between sales and marketing by developing and launching the company's inaugural revenue model and dynamic analytics practice.\n- Directed the end-to-end implementation, deployment, and management of new Salesforce (SFDC) and Marketo environments.\n- Developed and launched custom sales process automation, establishing comprehensive lead routing protocols, dynamic lead scoring, and full-funnel revenue lifecycle programs.\n\n**MySQL / Sun Microsystems / Oracle Corporation** | WW Sales Development Manager - MySQL Sales | Boise, Idaho | October 2007 - March 2011\n- Led the global Sales Development Representative (SDR) team across North America, Brazil, and Ireland, successfully maintaining continuous operations and performance through major corporate acquisitions by Sun Microsystems and Oracle.\n- Served on the elite SFDC tiger team tasked with executing a complete systemic overhaul of the Lead and Contact processes within Salesforce CRM.\n- Facilitated critical change management initiatives, guiding the enterprise transition and data migration from Salesforce.com to Oracle CRM.\n\n**Micron Technology** | Inside Sales Account Manager | Boise, Idaho | February 2001 - October 2007\n- Directed the dedicated memory supply chain for Cisco Systems, ensuring staging and product availability on a continuous rolling three-month basis.\n- Served as a key beta-tester for all new SAP modules and procedural updates related to Global Finished Goods.\n- Oversaw highly regulated international shipments, strictly enforcing compliance with complex, country-specific import and customs requirements.",
+      "skills": "**Domain Expertise:** Revenue Operations, Business Process Engineering, Sales Process Optimization, Global GTM Strategy, Marketing Automation, Data Governance.\n\n**Technology Ecosystems:** Salesforce (SFDC), Oracle CRM, Adobe Marketo Engage, Workato, Adobe Workfront, Asana, AddEvent, SAP.\n\n**Certifications:** Marketo Certified Expert, Automation Pro III, Automation Pro II.",
+      "education": "",
+      "certifications": "Marketo Certified Expert\nAutomation Pro III\nAutomation Pro II",
+      "projects": []
+    }
+  }
+}

@@ -38,6 +38,11 @@ export interface SimilarRole {
   searchQuery: string;
 }
 
+/** Onboarding seed draft — extends SimilarRole with a paint-by-numbers JD sketch */
+export interface OnboardingDraftSuggestion extends SimilarRole {
+  briefJd: string;
+}
+
 export interface FitScore {
   overall: number;
   breakdown: FitScoreBreakdown;
@@ -168,6 +173,9 @@ export interface UserProfile {
   totalTokensUsed?: number;
   totalEstimatedCostUsd?: number;
   onboardingDismissedAt?: string;
+  onboardingCompletedAt?: string;
+  targetIndustry?: string;
+  targetRoles?: string[];
   createdAt: string;
 }
 

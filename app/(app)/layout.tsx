@@ -5,9 +5,12 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Menu, Zap, ShieldAlert, RefreshCw, LogOut, Plus, Clock } from "lucide-react";
+import { Menu, ShieldAlert, RefreshCw, LogOut, Plus, Clock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { getUserProfile, getApplications, getMasterResumes } from "@/lib/db";
+import { needsOnboarding } from "@/lib/onboarding";
 import Sidebar from "@/components/Sidebar";
+import { HuntModeBrand } from "@/components/HuntModeBrand";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -27,6 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isMounted, setIsMounted] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -42,6 +46,40 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, router]);
 
+  useEffect(() => {
+    if (loading || !user || accessStatus !== "approved") {
+      setOnboardingChecked(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const [profile, applications, resumes] = await Promise.all([
+          getUserProfile(user.uid),
+          getApplications(user.uid),
+          getMasterResumes(user.uid),
+        ]);
+        if (cancelled) return;
+        if (
+          needsOnboarding({
+            profile,
+            applicationCount: applications.length,
+            resumeCount: resumes.length,
+          })
+        ) {
+          router.replace("/onboarding");
+          return;
+        }
+        setOnboardingChecked(true);
+      } catch {
+        if (!cancelled) setOnboardingChecked(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, loading, accessStatus, router]);
+
   const handleToggleCollapse = () => {
     setIsCollapsed((prev) => {
       const next = !prev;
@@ -56,7 +94,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setActionLoading(false);
   };
 
-  if (loading) {
+  if (loading || (accessStatus === "approved" && !onboardingChecked)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-3">
@@ -85,11 +123,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             )}
           />
 
-          <div className="flex items-center justify-center gap-2 mb-8">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
-              <Zap className="w-4.5 h-4.5 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-base tracking-tight text-white">HuntMode</span>
+          <div className="mb-8 flex justify-center">
+            <HuntModeBrand variant="stacked" />
           </div>
 
           <div className="flex justify-center mb-6">
@@ -209,14 +244,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 />
               </SheetContent>
             </Sheet>
-            <div className="flex items-center gap-2 ml-1">
-              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-primary">
-                <Zap className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <span className="font-bold text-sm text-foreground tracking-tight">
-                HuntMode
-              </span>
-            </div>
+            <HuntModeBrand variant="inline" />
           </div>
 
           <Link href="/settings" className="flex items-center">

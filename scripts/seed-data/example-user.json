@@ -1,0 +1,52 @@
+{
+  "profile": {
+    "name": "Rod Example",
+    "targetRoles": ["Director of Sales", "VP Revenue Operations"],
+    "targetIndustry": "B2B SaaS",
+    "targetRole": "Director of Sales, VP Revenue Operations"
+  },
+  "resume": {
+    "name": "Master Resume",
+    "category": "sales_ops",
+    "sections": {
+      "summary": "Revenue leader with 15+ years in enterprise B2B SaaS. Specializes in building repeatable sales motions, enabling AEs with technical narratives, and turning pipeline data into forecast accuracy.",
+      "experience": "**Acme Corp** | Toronto, ON\n*Director of Sales* | 2021–Present\n- Grew net-new ARR 42% YoY across mid-market and enterprise segments.\n- Partnered with product marketing to launch a verticalized pitch for fintech buyers.\n\n**Example Inc.** | Remote\n*Senior Account Executive* | 2017–2021\n- 128% quota attainment; top 5% of global AE roster.",
+      "skills": "**Sales:** Enterprise discovery, multi-threading, MEDDPICC, forecast hygiene.\n**Ops:** Salesforce, HubSpot, Gong, Clari.\n**Domains:** Infrastructure, observability, developer tools.",
+      "education": "BComm, University of Example",
+      "certifications": ""
+    }
+  },
+  "applications": [
+    {
+      "company": "VictoriaMetrics",
+      "role": "Director of Enterprise Sales",
+      "status": "draft",
+      "orgType": "scaleup",
+      "location": "Remote",
+      "remote": true,
+      "jobDescription": "Own enterprise pipeline for observability platform.\n\n- Build territory plan for NA enterprise accounts\n- Partner with solutions engineering on technical wins\n- Report to VP Sales; quota $2.5M ARR\n- Experience selling to platform/SRE buyers required",
+      "notes": "Strong fit: Rod has sold infra/OSS-adjacent deals before."
+    },
+    {
+      "company": "Honeycomb",
+      "role": "Enterprise Account Executive",
+      "status": "applied",
+      "orgType": "scaleup",
+      "location": "Remote",
+      "remote": true,
+      "appliedAt": "2026-07-01T00:00:00.000Z",
+      "jobDescription": "Land and expand observability platform in enterprise accounts.\n\n- Run full-cycle enterprise sales\n- Co-sell with technical champions and economic buyers\n- Experience with developer-led adoption motions",
+      "notes": "Applied via referral. Follow up week of July 14."
+    },
+    {
+      "company": "Datadog",
+      "role": "Senior Enterprise AE — Infrastructure",
+      "status": "phone_screen",
+      "orgType": "enterprise",
+      "location": "Toronto, ON",
+      "remote": false,
+      "jobDescription": "Expand infrastructure monitoring footprint in strategic accounts.\n\n- Multi-year contract experience\n- Platform + security buyer personas\n- Forecast and pipeline discipline",
+      "notes": "Phone screen scheduled — prep battlecard on cost-of-observability angle."
+    }
+  ]
+}

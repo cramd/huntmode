@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { HuntModeBrand } from "@/components/HuntModeBrand";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -83,9 +84,7 @@ export default function Sidebar({
       {/* Logo Section */}
       {isCollapsed && !isMobile ? (
         <div className="flex flex-col items-center border-b border-sidebar-border/30 py-4 gap-3">
-          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20 shrink-0">
-            <Zap className="w-5 h-5 text-white" />
-          </div>
+          <HuntModeBrand variant="icon" logoClassName="h-9 w-9" />
           {onToggleCollapse && (
             <button
               onClick={onToggleCollapse}
@@ -98,19 +97,12 @@ export default function Sidebar({
         </div>
       ) : (
         <div className="flex items-center justify-between px-6 py-5 border-b border-sidebar-border/30">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20 shrink-0">
-              <Zap className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="font-bold text-base text-sidebar-foreground tracking-tight leading-none">
-                HuntMode
-              </p>
-              <p className="text-[10px] text-sidebar-foreground/40 mt-1.5 font-medium">
-                Job Search HQ
-              </p>
-            </div>
-          </div>
+          <HuntModeBrand
+            variant="inline"
+            tagline="Job Search HQ"
+            domainClassName="text-sidebar-foreground"
+            taglineClassName="text-sidebar-foreground/40"
+          />
           {!isMobile && onToggleCollapse && (
             <button
               onClick={onToggleCollapse}

@@ -20,6 +20,7 @@ import {
   Megaphone,
   Sliders,
   Zap,
+  Undo2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ import type { MasterResume, UserProfile, ProjectEntry, Application } from "@/lib
 import { STATUS_CONFIG, CATEGORY_CONFIG, type ResumeCategory } from "@/lib/types";
 import { toast } from "sonner";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
+import { popUndoSnapshot, pushUndoSnapshot } from "@/lib/undo-stack";
 
 const SECTION_LABELS: Record<string, string> = {
   summary: "Professional Summary",
@@ -105,6 +107,12 @@ export default function ResumePage() {
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [editingProjectIdx, setEditingProjectIdx] = useState<number | null>(null);
   const [projectDraft, setProjectDraft] = useState<ProjectEntry>(EMPTY_PROJECT);
+  const [resumeUndoStack, setResumeUndoStack] = useState<MasterResume["sections"][]>([]);
+  const [undoing, setUndoing] = useState(false);
+
+  useEffect(() => {
+    setResumeUndoStack([]);
+  }, [activeId]);
 
   useEffect(() => {
     if (!user) return;
@@ -195,6 +203,10 @@ export default function ResumePage() {
 
   const handleSave = async () => {
     if (!user || !editData) return;
+    const previous = resumes.find((r) => r.id === editData.id);
+    if (previous?.sections) {
+      setResumeUndoStack((s) => pushUndoSnapshot(s, previous.sections));
+    }
     setSaving(true);
     try {
       const id = await saveMasterResume(
@@ -221,6 +233,36 @@ export default function ResumePage() {
       toast.error("Failed to save resume");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleUndoResume = async () => {
+    if (!user || !editData) return;
+    const { next, snapshot } = popUndoSnapshot(resumeUndoStack);
+    if (snapshot === null) return;
+    setResumeUndoStack(next);
+    setUndoing(true);
+    const restored = { ...editData, sections: snapshot };
+    setEditData(restored);
+    try {
+      await saveMasterResume(
+        user.uid,
+        {
+          name: restored.name,
+          category: restored.category || "general",
+          sections: restored.sections,
+          pdfUrl: restored.pdfUrl,
+        },
+        restored.id
+      );
+      setResumes((rs) =>
+        rs.map((r) => (r.id === restored.id ? { ...r, sections: snapshot } : r))
+      );
+      toast.success("Restored previous version");
+    } catch {
+      toast.error("Undo restored locally but failed to save");
+    } finally {
+      setUndoing(false);
     }
   };
 
@@ -309,8 +351,11 @@ export default function ResumePage() {
     );
 
   const applyParsedSections = (sections: MasterResume["sections"]) => {
+    if (editData?.sections) {
+      setResumeUndoStack((s) => pushUndoSnapshot(s, editData.sections));
+    }
     setEditData((d) => d ? { ...d, sections } : d);
-    toast.success("Resume parsed from PDF — review each section then save.");
+    toast.success("Resume parsed from PDF — review each section then save. Undo available.");
   };
 
   const handleParsedSectionsReady = (sections: MasterResume["sections"]) => {
@@ -510,6 +555,20 @@ export default function ResumePage() {
                   </Select>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    onClick={handleUndoResume}
+                    disabled={undoing || resumeUndoStack.length === 0}
+                    className="h-10 px-3 text-xs font-bold border-white/10 hover:bg-white/5 text-slate-300 hover:text-white rounded-xl disabled:opacity-40"
+                    title="Undo last save or parse"
+                  >
+                    {undoing ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                    ) : (
+                      <Undo2 className="w-3.5 h-3.5 mr-1.5" />
+                    )}
+                    Undo
+                  </Button>
                   <Button
                     onClick={handleSave}
                     disabled={saving}
@@ -845,8 +904,9 @@ export default function ResumePage() {
             <DialogTitle className="text-lg font-black tracking-tight text-white">Replace existing content?</DialogTitle>
           </DialogHeader>
           <p className="text-xs text-slate-400 leading-relaxed">
-            This resume already has content in some sections. Parsing the PDF will overwrite all
-            sections with the extracted content. This cannot be undone.
+            This resume already has content in some sections. Parsing the PDF will replace section
+            text in the editor. You can use Undo after apply if you change your mind (before leaving
+            the page).
           </p>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => { setShowOverwrite(false); setParsedSections(null); }} className="border-white/5 hover:bg-white/5 text-slate-300 hover:text-white rounded-xl">

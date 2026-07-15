@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, Key, User, Target, Loader2 } from "lucide-react";
+import { Save, Key, User, Target, Loader2, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -247,6 +247,65 @@ export default function SettingsPage() {
                 )}
               </Button>
             </div>
+            {(profile.aiProvider || "openai") === "google" && (
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 space-y-2.5">
+                <p className="text-xs font-bold text-emerald-300">
+                  How to get a Gemini API key
+                </p>
+                <ol className="list-decimal list-inside space-y-1.5 text-[11px] leading-relaxed text-slate-400">
+                  <li>
+                    Open{" "}
+                    <a
+                      href="https://aistudio.google.com/api-keys"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-0.5 font-semibold text-indigo-300 hover:text-indigo-200 underline-offset-2 hover:underline"
+                    >
+                      Google AI Studio → API keys
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </li>
+                  <li>Sign in with your Google account and accept the terms if prompted.</li>
+                  <li>
+                    Click <strong className="text-slate-300">Create API key</strong> (new project is
+                    fine for first-time setup).
+                  </li>
+                  <li>
+                    Copy the key (starts with <code className="font-mono text-slate-300">AIza…</code>
+                    ) and paste it above, then tap <strong className="text-slate-300">Test Key</strong>.
+                  </li>
+                </ol>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  Your key needs access to{" "}
+                  <code className="rounded bg-slate-950 px-1 py-0.5 font-mono text-slate-300">
+                    gemini-2.5-flash
+                  </code>{" "}
+                  (primary). HuntMode may also fall back to{" "}
+                  <code className="rounded bg-slate-950 px-1 py-0.5 font-mono text-slate-300">
+                    gemini-2.5-flash-lite
+                  </code>{" "}
+                  and{" "}
+                  <code className="rounded bg-slate-950 px-1 py-0.5 font-mono text-slate-300">
+                    gemini-3.5-flash
+                  </code>
+                  . Keys created in AI Studio include these Gemini models by default.
+                </p>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  Free tier works for light use. Keys stay in your profile and are only sent with
+                  your AI requests — never shared with other users.
+                </p>
+                <a
+                  href="https://ai.google.dev/gemini-api/docs/api-key"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400 hover:text-slate-200"
+                >
+                  Official Gemini API key docs
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
+
             <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
               Your API key is stored in your personal Firestore document and only used for your
               requests. It is never shared. Alternatively, you can set{" "}
