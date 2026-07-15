@@ -12,7 +12,8 @@ export const runtime = "nodejs";
 
 async function assertOnboardingAllowed(uid: string): Promise<string | null> {
   const profileSnap = await adminDb.doc(`users/${uid}/profile/data`).get();
-  if (profileSnap.data()?.onboardingCompletedAt) {
+  const profile = profileSnap.data();
+  if (profile?.onboardingCompletedAt && !profile?.forceOnboarding) {
     return "Onboarding already completed";
   }
   return null;

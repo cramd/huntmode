@@ -7,7 +7,7 @@ const google = createGoogleGenerativeAI({ apiKey: "dummy" });
 async function main() {
   try {
     await generateObject({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-3.5-flash"),
       prompt: "Return invalid JSON.",
       schema: z.object({ value: z.string() }),
     });

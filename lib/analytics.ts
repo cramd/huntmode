@@ -13,6 +13,7 @@ export const AnalyticsEvents = {
   MASTER_RESUME_SAVED: "master_resume_saved",
   SETTINGS_SAVED: "settings_saved",
   ONBOARDING_COMPLETED: "onboarding_completed",
+  SIMILAR_ROLES_SEARCHED: "similar_roles_searched",
 } as const;
 
 export type AnalyticsEventName = (typeof AnalyticsEvents)[keyof typeof AnalyticsEvents];

@@ -174,6 +174,8 @@ export interface UserProfile {
   totalEstimatedCostUsd?: number;
   onboardingDismissedAt?: string;
   onboardingCompletedAt?: string;
+  /** When true, show the setup wizard even if the user already has apps/resumes. */
+  forceOnboarding?: boolean;
   targetIndustry?: string;
   targetRoles?: string[];
   createdAt: string;

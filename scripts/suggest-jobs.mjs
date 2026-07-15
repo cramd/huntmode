@@ -100,7 +100,7 @@ async function suggestDrafts(seed) {
   if (!apiKey) throw new Error("GOOGLE_AI_API_KEY is not set");
 
   const google = createGoogleGenerativeAI({ apiKey });
-  const modelIds = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash"];
+  const modelIds = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
   const resumeText = resumeSectionsToText(seed.resume.sections);
   const prompt = buildSuggestPrompt({
     resumeText,

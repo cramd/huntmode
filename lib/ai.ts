@@ -6,9 +6,9 @@ import { streamText, type LanguageModel } from "ai";
 export type AIProvider = "openai" | "anthropic" | "google";
 
 const GOOGLE_MODEL_IDS = [
-  "gemini-2.5-flash",
-  "gemini-2.5-flash-lite",
   "gemini-3.5-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-flash-latest",
 ] as const;
 
 export interface GenerateParams {
@@ -56,7 +56,9 @@ export function isGoogleModelFallbackError(err: unknown): boolean {
     isTransientModelError(err) ||
     msg.includes("not found") ||
     msg.includes("is not supported") ||
-    msg.includes("shut down")
+    msg.includes("shut down") ||
+    msg.includes("no longer available") ||
+    msg.includes("update your code to use a newer model")
   );
 }
 
@@ -196,6 +198,38 @@ Scoring guidelines:
 - "similarRoles": 4-6 real companies and job titles of similar seniority, function, and org stage where this candidate would be a strong fit. Each searchQuery should be a Google-ready search like '"Senior PMM" site:greenhouse.io' or '"Head of Growth" fintech startup'
 
 Be honest — a score of 60 is not bad, it is useful information. Do not inflate scores.`;
+}
+
+export function buildFindSimilarSearchPrompt(params: {
+  company: string;
+  role: string;
+  jobDescription?: string;
+}): string {
+  const jd = params.jobDescription?.trim().slice(0, 2000) || "(No job description provided)";
+
+  return `You are a job search strategist. Given a role the candidate is tracking, generate 2-3 live web search queries to find similar open roles at other companies.
+
+SOURCE ROLE: ${params.role}
+SOURCE COMPANY: ${params.company}
+
+JOB DESCRIPTION (context):
+${jd}
+
+Return ONLY a valid JSON object — no markdown fences — with this shape:
+{
+  "queries": [
+    "<Google/Jina-ready search string 1>",
+    "<Google/Jina-ready search string 2>",
+    "<optional search string 3>"
+  ]
+}
+
+Rules:
+- Return exactly 2 or 3 queries
+- Target similar seniority, function, and domain — not the same company unless the query explicitly looks for peer companies
+- Prefer queries that surface job postings (e.g. site:greenhouse.io, site:lever.co, "open roles", "careers")
+- Do NOT repeat the exact same company+role pair; find adjacent opportunities
+- Each query should be under 120 characters`;
 }
 
 export function buildOnboardingSuggestPrompt(params: {

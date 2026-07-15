@@ -278,15 +278,15 @@ export default function SettingsPage() {
                 <p className="text-[10px] text-slate-500 leading-relaxed">
                   Your key needs access to{" "}
                   <code className="rounded bg-slate-950 px-1 py-0.5 font-mono text-slate-300">
-                    gemini-2.5-flash
+                    gemini-3.5-flash
                   </code>{" "}
                   (primary). HuntMode may also fall back to{" "}
                   <code className="rounded bg-slate-950 px-1 py-0.5 font-mono text-slate-300">
-                    gemini-2.5-flash-lite
+                    gemini-3.1-flash-lite
                   </code>{" "}
                   and{" "}
                   <code className="rounded bg-slate-950 px-1 py-0.5 font-mono text-slate-300">
-                    gemini-3.5-flash
+                    gemini-flash-latest
                   </code>
                   . Keys created in AI Studio include these Gemini models by default.
                 </p>

@@ -6,6 +6,7 @@ export function needsOnboarding(input: {
   resumeCount: number;
 }): boolean {
   const { profile, applicationCount, resumeCount } = input;
+  if (profile?.forceOnboarding) return true;
   if (profile?.onboardingCompletedAt) return false;
   if (applicationCount > 0 || resumeCount > 0) return false;
   if (profile?.onboardingDismissedAt) return false;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebase-admin";
+import { searchJobsWithJina } from "@/lib/jina-search";
 
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
@@ -25,33 +26,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const jinaUrl = `https://s.jina.ai/${encodeURIComponent(query)}`;
-    const headers: Record<string, string> = {
-      Accept: "application/json",
-    };
-    const jinaKey = process.env.JINA_API_KEY;
-    if (jinaKey) headers["Authorization"] = `Bearer ${jinaKey}`;
-
-    const res = await fetch(jinaUrl, { headers });
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: "Search service unavailable. Try opening the search links manually." },
-        { status: 502 }
-      );
-    }
-
-    const json = await res.json();
-
-    // Jina search returns { data: [{ title, url, description }] }
-    const results = (json.data || [])
-      .slice(0, 5)
-      .map((item: { title?: string; url?: string; description?: string }) => ({
-        title: item.title || "",
-        url: item.url || "",
-        snippet: item.description || "",
-      }))
-      .filter((r: { url: string }) => r.url);
-
+    const results = await searchJobsWithJina(query, 5);
     return NextResponse.json({ results });
   } catch (err) {
     console.error("[search-jobs] error:", err);

@@ -302,9 +302,6 @@ export default function ApplicationDetailPage() {
 
   const handleRegenerate = async (type: "cv" | "cl") => {
     setRegenError(null);
-    // #region agent log
-    // fetch('http://127.0.0.1:7755/ingest/515e276b-97ed-4604-80f1-6f57f7bffddb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7e1cb3'},body:JSON.stringify({sessionId:'7e1cb3',location:'[id]/page.tsx:handleRegenerate:entry',message:'regen called',data:{type,hasMasterResume:!!masterResume,jdLen:app?.jobDescription?.length??0,hasApiKey:!!(userProfile?.aiApiKey),provider:userProfile?.aiProvider,appLoaded:!!app},hypothesisId:'H-A,H-B,H-C,H-E',timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (!app || !masterResume) {
       toast.error("No master resume linked to this application. Go to My Resume and create one first.");
       return;
@@ -337,9 +334,6 @@ export default function ApplicationDetailPage() {
       return;
     }
 
-    // #region agent log
-    // fetch('http://127.0.0.1:7755/ingest/515e276b-97ed-4604-80f1-6f57f7bffddb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7e1cb3'},body:JSON.stringify({sessionId:'7e1cb3',location:'[id]/page.tsx:handleRegenerate:sendingToAPI',message:'calling useCompletion for regen',data:{type,masterTextLen:masterText.length,jdLen:app.jobDescription.length,provider:userProfile?.aiProvider},hypothesisId:'H-A,H-B,H-D',timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     generatingRef.current = type;
     setGenerating(type);
     const apiType = type === "cl" ? "cover_letter" : "cv";

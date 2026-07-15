@@ -34,6 +34,7 @@ import { STATUS_CONFIG, MOTIVATIONAL_MESSAGES, CATEGORY_CONFIG, ORG_TYPE_CONFIG,
 import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO } from "date-fns";
 import { Compass, Megaphone, Sliders, FileText } from "lucide-react";
 import { GettingStartedCard } from "@/components/GettingStartedCard";
+import { FindSimilarRolesButton } from "@/components/FindSimilarRolesButton";
 
 const STATUS_COLORS: Record<string, string> = {
   applied: "#6366f1",
@@ -634,26 +635,38 @@ export default function DashboardPage() {
               {applications.slice(0, 7).map((app) => {
                 const cfg = STATUS_CONFIG[app.status];
                 return (
-                  <Link
+                  <div
                     key={app.id}
-                    href={`/applications/${app.id}`}
-                    className="flex items-center justify-between py-2.5 hover:bg-white/5 px-2 -mx-2 rounded-xl transition-colors"
+                    className="flex items-center justify-between py-2.5 hover:bg-white/5 px-2 -mx-2 rounded-xl transition-colors gap-2"
                   >
-                    <div className="min-w-0">
-                      <p className="font-semibold text-xs text-white truncate">{app.role}</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5 truncate">{app.company}</p>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0 ml-3">
-                      {app.appliedAt && (
-                        <span className="text-[10px] text-slate-500 font-medium">
-                          {format(parseISO(app.appliedAt), "MMM d")}
+                    <FindSimilarRolesButton
+                      sourceApplication={app}
+                      existingApplications={applications}
+                      userProfile={profile}
+                      onApplicationCreated={(newApp) =>
+                        setApplications((prev) => [newApp, ...prev])
+                      }
+                    />
+                    <Link
+                      href={`/applications/${app.id}`}
+                      className="flex items-center justify-between flex-1 min-w-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-semibold text-xs text-white truncate">{app.role}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 truncate">{app.company}</p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0 ml-3">
+                        {app.appliedAt && (
+                          <span className="text-[10px] text-slate-500 font-medium">
+                            {format(parseISO(app.appliedAt), "MMM d")}
+                          </span>
+                        )}
+                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-current/25 bg-current/10 ${cfg.color}`}>
+                          {cfg.label}
                         </span>
-                      )}
-                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-current/25 bg-current/10 ${cfg.color}`}>
-                        {cfg.label}
-                      </span>
-                    </div>
-                  </Link>
+                      </div>
+                    </Link>
+                  </div>
                 );
               })}
             </div>

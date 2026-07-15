@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { FieldValue } from "firebase-admin/firestore";
 import { verifyOnboardingAuth } from "@/lib/onboarding-auth";
 import { adminDb, formatAdminError } from "@/lib/firebase-admin";
 import type { MasterResume, OnboardingDraftSuggestion } from "@/lib/types";
@@ -34,7 +35,8 @@ export async function POST(req: NextRequest) {
 
   const profileRef = adminDb.doc(`users/${auth.uid}/profile/data`);
   const profileSnap = await profileRef.get();
-  if (profileSnap.data()?.onboardingCompletedAt) {
+  const profile = profileSnap.data() || {};
+  if (profile.onboardingCompletedAt && !profile.forceOnboarding) {
     return NextResponse.json({ error: "Onboarding already completed" }, { status: 400 });
   }
 
@@ -69,26 +71,44 @@ export async function POST(req: NextRequest) {
   const targetRoleJoined = targetRoles.join(", ");
 
   try {
-    let masterResumeId: string | null = null;
+    const resumesSnap = await adminDb
+      .collection(`users/${auth.uid}/masterResumes`)
+      .limit(1)
+      .get();
+    const appsSnap = await adminDb
+      .collection(`users/${auth.uid}/applications`)
+      .limit(1)
+      .get();
+    const preserveExistingApps = !appsSnap.empty;
+
+    let masterResumeId: string | null = resumesSnap.empty ? null : resumesSnap.docs[0].id;
 
     if (sectionsRaw && typeof sectionsRaw === "object") {
-      const resumeRef = adminDb.collection(`users/${auth.uid}/masterResumes`).doc();
-      masterResumeId = resumeRef.id;
-      await resumeRef.set({
-        uid: auth.uid,
-        name: "Master Resume",
-        category: "general",
-        sections: {
-          summary: sectionsRaw.summary || "",
-          experience: sectionsRaw.experience || "",
-          skills: sectionsRaw.skills || "",
-          education: sectionsRaw.education || "",
-          certifications: sectionsRaw.certifications || "",
-          projects: Array.isArray(sectionsRaw.projects) ? sectionsRaw.projects : [],
-        },
-        createdAt: now,
-        updatedAt: now,
-      });
+      const sections = {
+        summary: sectionsRaw.summary || "",
+        experience: sectionsRaw.experience || "",
+        skills: sectionsRaw.skills || "",
+        education: sectionsRaw.education || "",
+        certifications: sectionsRaw.certifications || "",
+        projects: Array.isArray(sectionsRaw.projects) ? sectionsRaw.projects : [],
+      };
+      if (masterResumeId) {
+        await adminDb.doc(`users/${auth.uid}/masterResumes/${masterResumeId}`).set(
+          { sections, updatedAt: now },
+          { merge: true }
+        );
+      } else {
+        const resumeRef = adminDb.collection(`users/${auth.uid}/masterResumes`).doc();
+        masterResumeId = resumeRef.id;
+        await resumeRef.set({
+          uid: auth.uid,
+          name: "Master Resume",
+          category: "general",
+          sections,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
     }
 
     await profileRef.set(
@@ -97,32 +117,36 @@ export async function POST(req: NextRequest) {
         targetIndustry,
         targetRole: targetRoleJoined,
         onboardingCompletedAt: now,
+        forceOnboarding: FieldValue.delete(),
+        onboardingDismissedAt: FieldValue.delete(),
       },
       { merge: true }
     );
 
     const applicationIds: string[] = [];
-    for (const draft of drafts) {
-      const appRef = adminDb.collection(`users/${auth.uid}/applications`).doc();
-      const notes = [draft.reason, draft.searchQuery ? `Search: ${draft.searchQuery}` : ""]
-        .filter(Boolean)
-        .join("\n\n");
-      await appRef.set({
-        uid: auth.uid,
-        company: draft.company,
-        role: draft.role,
-        jobUrl: "",
-        jobDescription: draft.briefJd,
-        status: "draft",
-        appliedAt: null,
-        notes,
-        generatedCV: "",
-        generatedCoverLetter: "",
-        resumeUsed: masterResumeId,
-        createdAt: now,
-        updatedAt: now,
-      });
-      applicationIds.push(appRef.id);
+    if (!preserveExistingApps) {
+      for (const draft of drafts) {
+        const appRef = adminDb.collection(`users/${auth.uid}/applications`).doc();
+        const notes = [draft.reason, draft.searchQuery ? `Search: ${draft.searchQuery}` : ""]
+          .filter(Boolean)
+          .join("\n\n");
+        await appRef.set({
+          uid: auth.uid,
+          company: draft.company,
+          role: draft.role,
+          jobUrl: "",
+          jobDescription: draft.briefJd,
+          status: "draft",
+          appliedAt: null,
+          notes,
+          generatedCV: "",
+          generatedCoverLetter: "",
+          resumeUsed: masterResumeId,
+          createdAt: now,
+          updatedAt: now,
+        });
+        applicationIds.push(appRef.id);
+      }
     }
 
     return NextResponse.json({
@@ -130,6 +154,7 @@ export async function POST(req: NextRequest) {
       masterResumeId,
       applicationIds,
       draftCount: applicationIds.length,
+      preservedExistingApplications: preserveExistingApps,
     });
   } catch (err: unknown) {
     console.error("[onboarding/complete] error:", err);

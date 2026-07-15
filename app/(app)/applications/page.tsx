@@ -14,11 +14,12 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
-import { getApplications, deleteApplication, getMasterResumes } from "@/lib/db";
-import type { Application, ApplicationStatus, MasterResume } from "@/lib/types";
+import { getApplications, deleteApplication, getMasterResumes, getUserProfile } from "@/lib/db";
+import type { Application, ApplicationStatus, MasterResume, UserProfile } from "@/lib/types";
 import { STATUS_CONFIG, CATEGORY_CONFIG, type ResumeCategory } from "@/lib/types";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
+import { FindSimilarRolesButton } from "@/components/FindSimilarRolesButton";
 
 type SortKey = "createdAt" | "company" | "role" | "status" | "appliedAt" | "fitScore";
 type SortDir = "asc" | "desc";
@@ -40,6 +41,7 @@ export default function ApplicationsPage() {
   const { user } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
   const [resumes, setResumes] = useState<MasterResume[]>([]);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -52,9 +54,11 @@ export default function ApplicationsPage() {
     Promise.all([
       getApplications(user.uid),
       getMasterResumes(user.uid),
-    ]).then(([apps, rs]) => {
+      getUserProfile(user.uid),
+    ]).then(([apps, rs, prof]) => {
       setApplications(apps);
       setResumes(rs);
+      setProfile(prof);
       setLoading(false);
     });
   }, [user]);
@@ -214,17 +218,27 @@ export default function ApplicationsPage() {
                     className="p-4 space-y-2.5 hover:bg-white/5 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <Link href={`/applications/${app.id}`} className="flex items-center gap-2.5 min-w-0 flex-1">
-                        {app.resumeUsed && (
-                          <div className={`p-1.5 rounded-lg border border-current/25 bg-current/10 shrink-0 ${catCfg.color}`}>
-                            <CatIcon className="w-3.5 h-3.5" />
+                      <div className="flex items-center gap-2 shrink-0">
+                        <FindSimilarRolesButton
+                          sourceApplication={app}
+                          existingApplications={applications}
+                          userProfile={profile}
+                          onApplicationCreated={(newApp) =>
+                            setApplications((prev) => [newApp, ...prev])
+                          }
+                        />
+                        <Link href={`/applications/${app.id}`} className="flex items-center gap-2.5 min-w-0 flex-1">
+                          {app.resumeUsed && (
+                            <div className={`p-1.5 rounded-lg border border-current/25 bg-current/10 shrink-0 ${catCfg.color}`}>
+                              <CatIcon className="w-3.5 h-3.5" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-bold text-white truncate">{app.company}</p>
+                            <p className="text-sm text-slate-300 font-semibold truncate">{app.role}</p>
                           </div>
-                        )}
-                        <div className="min-w-0">
-                          <p className="font-bold text-white truncate">{app.company}</p>
-                          <p className="text-sm text-slate-300 font-semibold truncate">{app.role}</p>
-                        </div>
-                      </Link>
+                        </Link>
+                      </div>
                       {app.jobUrl && (
                         <a
                           href={app.jobUrl}
@@ -313,6 +327,14 @@ export default function ApplicationsPage() {
                       >
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-2.5">
+                            <FindSimilarRolesButton
+                              sourceApplication={app}
+                              existingApplications={applications}
+                              userProfile={profile}
+                              onApplicationCreated={(newApp) =>
+                                setApplications((prev) => [newApp, ...prev])
+                              }
+                            />
                             {app.resumeUsed && (
                               <div className={`p-1.5 rounded-lg border border-current/25 bg-current/10 ${catCfg.color}`} title={catCfg.label}>
                                 <CatIcon className="w-3.5 h-3.5" />

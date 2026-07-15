@@ -345,13 +345,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logDiagnostic("signInWithGoogle action triggered.");
     setAuthError(null);
 
-    // Try Google Identity Services (first-party OAuth flow) first to bypass iframe issues on custom domains
+    // GIS initTokenClient requires window.location.origin to be listed on the OAuth Web
+    // client's Authorized JavaScript origins. Firebase Auth uses authDomain (firebaseapp.com)
+    // for the OAuth handshake, so custom domains only need Firebase authorizedDomains.
+    // Keep GIS only for origins already registered on client
+    // 928125401687-bqj0qujjgc75mgae0c10foq8k9b3lreq — otherwise origin_mismatch.
+    const gisRegisteredOrigins = new Set([
+      "http://localhost:3000",
+      "https://fuzzynacho.org",
+      "https://www.fuzzynacho.org",
+      "https://dvp-insight-platform.firebaseapp.com",
+      "https://dvp-insight-platform.web.app",
+      ...(process.env.NEXT_PUBLIC_GOOGLE_GIS_ORIGINS || "")
+        .split(",")
+        .map((o) => o.trim())
+        .filter(Boolean),
+    ]);
+    const pageOrigin = typeof window !== "undefined" ? window.location.origin : "";
+    const canUseGis = gisRegisteredOrigins.has(pageOrigin);
+
     try {
       logDiagnostic("Attempting first-party Google Identity Services flow...");
       const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "928125401687-bqj0qujjgc75mgae0c10foq8k9b3lreq.apps.googleusercontent.com";
       const google = (window as any).google;
-      
-      if (google?.accounts?.oauth2) {
+
+      if (canUseGis && google?.accounts?.oauth2) {
         logDiagnostic("Google Identity Services detected. Initializing Token Client...");
         const tokenClient = google.accounts.oauth2.initTokenClient({
           client_id: clientId,
@@ -380,7 +398,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tokenClient.requestAccessToken();
         return; // Success, bypass Firebase fallback
       } else {
-        logDiagnostic("Google Identity Services script not available. Falling back to Firebase Auth...");
+        logDiagnostic(
+          canUseGis
+            ? "Google Identity Services script not available. Falling back to Firebase Auth..."
+            : `Origin ${pageOrigin} not in GIS-registered origins. Using Firebase Auth to avoid origin_mismatch.`
+        );
       }
     } catch (gisErr) {
       logDiagnostic(`Google Identity Services flow encountered an error: ${String(gisErr)}. Falling back to Firebase Auth...`);
@@ -426,6 +448,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else if (code === "auth/unauthorized-domain") {
         setAuthError(
           `This domain is not authorized for sign-in. Add "${window.location.hostname}" to Firebase Console → Authentication → Settings → Authorized domains.`
+        );
+      } else if (typeof code === "string" && code.includes("requests-from-referer") && code.includes("are-blocked")) {
+        setAuthError(
+          `Sign-in blocked for this domain by the Firebase API key HTTP referrer settings. Add "${window.location.origin}/*" to the Browser key restrictions in Google Cloud Console.`
         );
       } else {
         setAuthError(`Sign-in failed: ${code || message}`);
