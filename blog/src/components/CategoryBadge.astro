@@ -1,0 +1,17 @@
+---
+import type { BlogCategory } from "../content.config";
+import { categoryHref, categoryLabel } from "../lib/blog";
+
+interface Props {
+  category: BlogCategory;
+}
+
+const { category } = Astro.props;
+---
+
+<a
+  href={categoryHref(category)}
+  class="inline-flex rounded-full border border-indigo-500/25 bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-200 transition-colors hover:bg-indigo-500/20"
+>
+  {categoryLabel(category)}
+</a>

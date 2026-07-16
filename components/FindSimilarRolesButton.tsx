@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { isWorkdayJobUrl } from "@/lib/job-url";
 
 interface SimilarSearchResult {
   title: string;
@@ -95,8 +96,8 @@ export function FindSimilarRolesButton({
   const handleAddDraft = async (result: SimilarSearchResult) => {
     if (!user) return;
 
-    const company = result.company || result.title.split(/\s+-\s+/)[0]?.trim() || "Unknown company";
-    const role = result.role || result.title;
+    let company = result.company || result.title.split(/\s+-\s+/)[0]?.trim() || "Unknown company";
+    let role = result.role || result.title;
 
     const existing = findMatchingApplication(localApps, {
       company,
@@ -110,17 +111,53 @@ export function FindSimilarRolesButton({
 
     setAddingUrl(result.url);
     try {
+      const token = await user.getIdToken();
+      let jobDescription = result.snippet || "";
+      let location: string | undefined;
+      let salaryRange: string | undefined;
+      let remote: boolean | undefined;
+
+      const scrapeRes = await fetch("/api/scrape-job", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          url: result.url,
+          provider: userProfile?.aiProvider || "google",
+          apiKey: userProfile?.aiApiKey || undefined,
+        }),
+      });
+      const scrapeData = await scrapeRes.json();
+      if (isWorkdayJobUrl(result.url) && !scrapeRes.ok) {
+        toast.info("Workday fetch can be slow — draft saved with search snippet.", {
+          description: "Open the posting and paste the full description to enrich this draft.",
+        });
+      }
+      if (scrapeRes.ok && scrapeData.text) {
+        jobDescription = scrapeData.text;
+        if (scrapeData.company) company = scrapeData.company;
+        if (scrapeData.role) role = scrapeData.role;
+        if (scrapeData.location) location = scrapeData.location;
+        if (scrapeData.salaryRange) salaryRange = scrapeData.salaryRange;
+        if (scrapeData.remote !== undefined) remote = scrapeData.remote;
+      }
+
       const id = await createApplication(user.uid, {
         company,
         role,
         jobUrl: result.url,
-        jobDescription: result.snippet || "",
+        jobDescription,
         status: "draft",
         appliedAt: null,
         notes: `Found via similar search from ${sourceApplication.company} — ${sourceApplication.role}`,
         generatedCV: "",
         generatedCoverLetter: "",
         resumeUsed: sourceApplication.resumeUsed || null,
+        ...(location ? { location } : {}),
+        ...(salaryRange ? { salaryRange } : {}),
+        ...(remote !== undefined ? { remote } : {}),
       });
 
       const newApp: Application = {
@@ -129,7 +166,7 @@ export function FindSimilarRolesButton({
         company,
         role,
         jobUrl: result.url,
-        jobDescription: result.snippet || "",
+        jobDescription,
         status: "draft",
         appliedAt: null,
         notes: `Found via similar search from ${sourceApplication.company} — ${sourceApplication.role}`,
@@ -138,6 +175,9 @@ export function FindSimilarRolesButton({
         resumeUsed: sourceApplication.resumeUsed || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        ...(location ? { location } : {}),
+        ...(salaryRange ? { salaryRange } : {}),
+        ...(remote !== undefined ? { remote } : {}),
       };
 
       setLocalApps((prev) => [newApp, ...prev]);
@@ -148,7 +188,15 @@ export function FindSimilarRolesButton({
         company,
         source: "similar_roles",
       });
-      toast.success(`Draft added: ${role} at ${company}`);
+      if (scrapeRes.ok && scrapeData.text) {
+        const sourceLabel =
+          scrapeData.source === "workday" ? " (from Workday)" : "";
+        toast.success(`Draft added: ${role} at ${company}${sourceLabel}`);
+      } else {
+        toast.success(`Draft added: ${role} at ${company}`, {
+          description: "Could not fetch the full posting — snippet saved instead.",
+        });
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to add draft";
       toast.error(msg);
@@ -267,7 +315,10 @@ export function FindSimilarRolesButton({
                           className="h-7 text-[10px] font-bold border-purple-500/30 bg-purple-500/10 text-purple-200 hover:bg-purple-500/20 rounded-lg"
                         >
                           {isAdding ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Fetching…
+                            </>
                           ) : (
                             <Plus className="w-3 h-3" />
                           )}

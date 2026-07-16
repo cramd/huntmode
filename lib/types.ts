@@ -17,11 +17,48 @@ export interface InterviewSection {
   order: number;
 }
 
+export type InterviewChatMode = "screening" | "secondary" | "pressure";
+
+export type InterviewChatFocus = "behavioral" | "role_depth" | "culture" | "general";
+
+export interface InterviewChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: string;
+}
+
+export interface InterviewChatDebrief {
+  clarity: number;
+  structure: number;
+  specificity: number;
+  roleFit: number;
+  summary: string;
+  rewrites: string[];
+  researchGaps: string[];
+  weakSpots: string[];
+  generatedAt: string;
+}
+
+export interface InterviewChatSession {
+  id: string;
+  mode: InterviewChatMode;
+  focus?: InterviewChatFocus;
+  messages: InterviewChatMessage[];
+  questionsAsked?: string[];
+  debrief?: InterviewChatDebrief;
+  startedAt: string;
+  endedAt?: string;
+}
+
 export interface InterviewPrepData {
   sections: InterviewSection[];
   notes?: string;
   questions?: string[];
   zoomLevel?: number;
+  chatSessions?: InterviewChatSession[];
+  likelyQuestions?: string[];
+  likelyQuestionsGeneratedAt?: string;
 }
 
 export interface FitScoreBreakdown {

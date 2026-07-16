@@ -8,12 +8,13 @@ import { needsOnboarding } from "@/lib/onboarding";
 import { UploadCvStep } from "@/components/onboarding/UploadCvStep";
 import { TargetsStep } from "@/components/onboarding/TargetsStep";
 import { ReviewDraftsStep } from "@/components/onboarding/ReviewDraftsStep";
+import { ApiKeyStep } from "@/components/onboarding/ApiKeyStep";
 import { HuntModeBrand } from "@/components/HuntModeBrand";
-import type { MasterResume, OnboardingDraftSuggestion } from "@/lib/types";
+import type { MasterResume, OnboardingDraftSuggestion, UserProfile } from "@/lib/types";
 import type { ParseResumeHints } from "@/lib/parse-resume";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 export default function OnboardingPage() {
   const { user, loading, accessStatus } = useAuth();
@@ -33,6 +34,11 @@ export default function OnboardingPage() {
   const [suggestError, setSuggestError] = useState<string | null>(null);
 
   const [drafts, setDrafts] = useState<OnboardingDraftSuggestion[]>([]);
+
+  const [aiProvider, setAiProvider] = useState<NonNullable<UserProfile["aiProvider"]>>("google");
+  const [aiApiKey, setAiApiKey] = useState("");
+  const [keyValidated, setKeyValidated] = useState(false);
+
   const [completeError, setCompleteError] = useState<string | null>(null);
   const [completing, setCompleting] = useState(false);
 
@@ -73,6 +79,11 @@ export default function OnboardingPage() {
           );
         }
         if (profile?.targetIndustry) setTargetIndustry(profile.targetIndustry);
+        if (profile?.aiProvider) setAiProvider(profile.aiProvider);
+        if (profile?.aiApiKey) {
+          setAiApiKey(profile.aiApiKey);
+          setKeyValidated(true);
+        }
         setGateLoading(false);
       } catch {
         if (!cancelled) setGateLoading(false);
@@ -146,12 +157,13 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleComplete = async () => {
+  const handleComplete = async (options?: { skippedApiKey?: boolean }) => {
     if (!user) return;
     setCompleting(true);
     setCompleteError(null);
     try {
       const headers = await getAuthHeaders();
+      const trimmedKey = aiApiKey.trim();
       const res = await fetch("/api/onboarding/complete", {
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
@@ -160,6 +172,8 @@ export default function OnboardingPage() {
           targetRoles,
           targetIndustry,
           drafts,
+          aiProvider: trimmedKey && !options?.skippedApiKey ? aiProvider : undefined,
+          aiApiKey: trimmedKey && !options?.skippedApiKey ? trimmedKey : undefined,
         }),
       });
       const data = await res.json();
@@ -169,6 +183,7 @@ export default function OnboardingPage() {
         draft_count: data.draftCount ?? drafts.length,
         had_cv: !!sections,
         role_count: targetRoles.length,
+        added_api_key: Boolean(trimmedKey && !options?.skippedApiKey),
       });
 
       router.replace("/dashboard");
@@ -200,14 +215,14 @@ export default function OnboardingPage() {
           <HuntModeBrand variant="inline" className="items-start sm:items-center" />
           <div className="text-left sm:text-right">
             <p className="text-xs font-bold uppercase tracking-widest text-indigo-400/80">
-              Setup · Step {step} of 3
+              Setup · Step {step} of 4
             </p>
             <p className="text-lg font-bold text-white">Welcome aboard</p>
           </div>
         </div>
 
         <div className="mb-8 flex gap-2">
-          {[1, 2, 3].map((s) => (
+          {[1, 2, 3, 4].map((s) => (
             <div
               key={s}
               className={`h-1 flex-1 rounded-full transition-colors ${
@@ -217,10 +232,12 @@ export default function OnboardingPage() {
           ))}
         </div>
 
-        <p className="mb-6 rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-4 py-3 text-xs leading-relaxed text-indigo-200/90">
-          Setup runs on HuntMode&apos;s server AI key — parse your CV, suggest jobs, and seed
-          draft applications. Add your own key later in Settings for tailoring and interview prep.
-        </p>
+        {step <= 3 && (
+          <p className="mb-6 rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-4 py-3 text-xs leading-relaxed text-indigo-200/90">
+            Steps 1–3 use HuntMode&apos;s server AI to parse your CV and suggest starter roles. Step 4
+            connects your own key for tailoring, fit scores, and interview prep inside the app.
+          </p>
+        )}
 
         {step === 1 && (
           <UploadCvStep
@@ -251,7 +268,6 @@ export default function OnboardingPage() {
         {step === 3 && (
           <ReviewDraftsStep
             drafts={drafts}
-            completing={completing}
             error={completeError}
             onUpdateDraft={(index, patch) => {
               setDrafts((prev) =>
@@ -262,7 +278,32 @@ export default function OnboardingPage() {
               setDrafts((prev) => prev.filter((_, i) => i !== index));
             }}
             onBack={() => setStep(2)}
-            onComplete={handleComplete}
+            onContinue={() => {
+              setCompleteError(null);
+              setStep(4);
+            }}
+          />
+        )}
+
+        {step === 4 && (
+          <ApiKeyStep
+            aiProvider={aiProvider}
+            aiApiKey={aiApiKey}
+            keyValidated={keyValidated}
+            completing={completing}
+            error={completeError}
+            onChangeProvider={(provider) => {
+              setAiProvider(provider);
+              setKeyValidated(false);
+            }}
+            onChangeApiKey={(key) => {
+              setAiApiKey(key);
+              setKeyValidated(false);
+            }}
+            onKeyValidated={() => setKeyValidated(true)}
+            onBack={() => setStep(3)}
+            onSkip={() => handleComplete({ skippedApiKey: true })}
+            onComplete={() => handleComplete()}
           />
         )}
       </div>

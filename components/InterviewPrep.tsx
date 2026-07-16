@@ -22,7 +22,8 @@ import {
   Loader2,
   Sparkles,
   Maximize2,
-  Minimize2
+  Minimize2,
+  MessageSquare
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +39,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import type { Application, InterviewSection, InterviewPrepData, UserProfile, MasterResume } from "@/lib/types";
+import InterviewChat from "@/components/InterviewChat";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 interface InterviewPrepProps {
   application: Application;
@@ -206,6 +210,7 @@ export default function InterviewPrep({ application, onUpdate, userProfile, mast
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [dragOverCardId, setDragOverCardId] = useState<string | null>(null);
   const [canDrag, setCanDrag] = useState(false);
+  const [prepView, setPrepView] = useState<"hud" | "coach">("hud");
 
   useEffect(() => {
     const mq = window.matchMedia("(pointer: fine)");
@@ -649,6 +654,67 @@ export default function InterviewPrep({ application, onUpdate, userProfile, mast
   return (
     <div className={`text-slate-100 select-none transition-all duration-300 ${focusMode ? 'fixed inset-0 z-[100] p-4 sm:p-8 md:p-12 bg-slate-950/95 backdrop-blur-3xl overflow-y-auto' : ''}`}>
       <div className={`flex flex-col gap-6 w-full ${focusMode ? 'max-w-7xl mx-auto' : 'min-h-[600px]'}`}>
+
+      {!focusMode && (
+        <div className="space-y-2">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              Interview prep mode
+            </p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Switch between live talking-point HUD and AI practice coach.
+            </p>
+          </div>
+          <Tabs value={prepView} onValueChange={(value) => setPrepView(value as "hud" | "coach")} className="w-full">
+            <TabsList className="bg-slate-900/60 border border-white/10 p-1.5 h-auto w-full sm:w-auto gap-1.5 rounded-2xl">
+              <TabsTrigger
+                value="hud"
+                className={cn(
+                  "group h-auto min-h-12 flex-1 sm:flex-none flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 rounded-xl border px-4 py-2.5 text-left cursor-pointer",
+                  "border-transparent text-slate-400 hover:border-white/10 hover:bg-white/5 hover:text-white",
+                  "data-active:border-indigo-500/40 data-active:bg-indigo-500/15 data-active:text-indigo-100"
+                )}
+              >
+                <Maximize2 className="h-3.5 w-3.5 shrink-0 opacity-70 group-data-active:opacity-100" />
+                <span>
+                  <span className="block text-xs font-bold uppercase tracking-wide">Live HUD</span>
+                  <span className="block text-[10px] font-medium normal-case tracking-normal text-slate-500 group-data-active:text-indigo-200/80">
+                    Talking points for the call
+                  </span>
+                </span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="coach"
+                className={cn(
+                  "group h-auto min-h-12 flex-1 sm:flex-none flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 rounded-xl border px-4 py-2.5 text-left cursor-pointer",
+                  "border-transparent text-slate-400 hover:border-white/10 hover:bg-white/5 hover:text-white",
+                  "data-active:border-indigo-500/40 data-active:bg-indigo-500/15 data-active:text-indigo-100"
+                )}
+              >
+                <MessageSquare className="h-3.5 w-3.5 shrink-0 opacity-70 group-data-active:opacity-100" />
+                <span>
+                  <span className="block text-xs font-bold uppercase tracking-wide">Practice Coach</span>
+                  <span className="block text-[10px] font-medium normal-case tracking-normal text-slate-500 group-data-active:text-indigo-200/80">
+                    Rehearse answers with AI
+                  </span>
+                </span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      )}
+
+      {prepView === "coach" && !focusMode ? (
+        <InterviewChat
+          application={application}
+          masterResume={masterResume}
+          userProfile={userProfile}
+          user={user}
+          onUpdate={onUpdate}
+          hasAIKey={hasAIKey}
+        />
+      ) : (
+      <>
       
       {/* Header bar: Timer, Zoom, Progress */}
       <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-4 bg-slate-900/60 border border-white/5 p-4 rounded-2xl shadow-lg backdrop-blur-sm">
@@ -1168,6 +1234,9 @@ export default function InterviewPrep({ application, onUpdate, userProfile, mast
           </form>
         </DialogContent>
       </Dialog>
+
+      </>
+      )}
 
       </div>
     </div>

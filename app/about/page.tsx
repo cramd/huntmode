@@ -88,15 +88,23 @@ export default function AboutPage() {
         <div className="absolute bottom-[-10%] right-[-10%] h-[40%] w-[40%] rounded-full bg-purple-500/5 blur-[120px]" />
       </div>
 
-      <header className="relative z-10 mx-auto flex max-w-5xl items-center justify-between px-6 py-8 sm:px-10">
+      <header className="relative z-10 mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-8 sm:px-10">
         <HuntModeBrand variant="inline" href="/" />
-        <Link
-          href="/"
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-transparent px-3 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to sign in
-        </Link>
+        <nav className="flex items-center gap-3 sm:gap-4">
+          <Link
+            href="/blog/"
+            className="text-sm font-medium text-slate-400 transition-colors hover:text-white"
+          >
+            Blog
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-transparent px-3 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to sign in
+          </Link>
+        </nav>
       </header>
 
       <main className="relative z-10 mx-auto max-w-5xl space-y-20 px-6 pb-24 sm:px-10">

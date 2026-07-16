@@ -15,12 +15,16 @@ export async function searchJobsWithJina(
   const headers: Record<string, string> = {
     Accept: "application/json",
   };
-  const jinaKey = process.env.JINA_API_KEY;
-  if (jinaKey) headers.Authorization = `Bearer ${jinaKey}`;
+  const jinaKey = process.env.JINA_API_KEY?.trim();
+  if (!jinaKey) {
+    throw new Error("JINA_API_KEY is not configured on the server");
+  }
+  headers.Authorization = `Bearer ${jinaKey}`;
 
   const res = await fetch(jinaUrl, { headers });
   if (!res.ok) {
-    throw new Error("Search service unavailable");
+    const detail = res.status === 401 ? "invalid or expired API key" : `HTTP ${res.status}`;
+    throw new Error(`Search service unavailable (${detail})`);
   }
 
   const json = await res.json();

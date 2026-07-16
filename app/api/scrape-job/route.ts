@@ -4,12 +4,18 @@ import { withModelFallback, AIProvider } from "@/lib/ai";
 import { generateObject } from "ai";
 import { z } from "zod";
 
-type FetchSource = "greenhouse" | "lever" | "ashby" | "direct" | "jina";
+type FetchSource = "greenhouse" | "lever" | "ashby" | "workday" | "direct" | "jina";
+
+const DIRECT_FETCH_TIMEOUT_MS = 8_000;
+const JINA_FETCH_TIMEOUT_MS = 20_000;
+const ATS_SOURCES: FetchSource[] = ["greenhouse", "lever", "ashby", "workday"];
 
 interface JobMeta {
   company?: string;
   role?: string;
   location?: string;
+  salaryRange?: string;
+  remote?: boolean;
 }
 
 export async function POST(req: NextRequest) {
@@ -111,7 +117,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 4. Generic gh_jid — discover Greenhouse board token from page HTML
+    // 4. Workday CXS API
+    if (!text) {
+      const workdayRef = parseWorkdayRef(url);
+      if (workdayRef) {
+        console.log(
+          `[scrape-job] Trying Workday API tenant=${workdayRef.tenant} site=${workdayRef.site}`
+        );
+        const workdayResult = await fetchWorkdayJob(workdayRef);
+        if (workdayResult) {
+          text = workdayResult.text;
+          fetchSource = "workday";
+          atsMeta = workdayResult;
+          console.log(
+            `[scrape-job] Workday OK — role="${workdayResult.role}" textLen=${text.length}`
+          );
+        } else {
+          console.log("[scrape-job] Workday API returned no usable content");
+        }
+      }
+    }
+
+    // 5. Generic gh_jid — discover Greenhouse board token from page HTML
     if (!text && /[?&]gh_jid=\d+/i.test(url)) {
       const ghJidRef = await resolveGhJidGreenhouseRef(url);
       if (ghJidRef) {
@@ -130,7 +157,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 5. Direct fetch
+    // 6. Direct fetch
     if (!text) {
       try {
         const res = await fetch(url, {
@@ -141,6 +168,7 @@ export async function POST(req: NextRequest) {
             "Accept-Language": "en-US,en;q=0.9",
           },
           redirect: "follow",
+          signal: AbortSignal.timeout(DIRECT_FETCH_TIMEOUT_MS),
         });
 
         if (res.ok && !res.url.includes("login") && !res.url.includes("sign_in")) {
@@ -165,7 +193,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 6. Jina Reader fallback
+    // 7. Jina Reader fallback
     if (!text) {
       try {
         const jinaUrl = `https://r.jina.ai/${encodeURIComponent(url)}`;
@@ -177,7 +205,10 @@ export async function POST(req: NextRequest) {
         if (jinaKey) jinaHeaders["Authorization"] = `Bearer ${jinaKey}`;
 
         console.log("[scrape-job] Trying Jina Reader fallback");
-        const jinaRes = await fetch(jinaUrl, { headers: jinaHeaders });
+        const jinaRes = await fetch(jinaUrl, {
+          headers: jinaHeaders,
+          signal: AbortSignal.timeout(JINA_FETCH_TIMEOUT_MS),
+        });
         if (jinaRes.ok) {
           const raw = await jinaRes.text();
           const stripped = raw
@@ -225,8 +256,12 @@ export async function POST(req: NextRequest) {
       remote: boolean;
     }> = { ...atsMeta };
     const isMarc = userEmail === "marcsherwood@gmail.com";
+    const hasAtsMeta =
+      ATS_SOURCES.includes(fetchSource) && Boolean(text && atsMeta.role);
 
-    if (isMarc || (apiKey && apiKey.trim())) {
+    if (hasAtsMeta) {
+      parsed = { ...parsed, ...parseJobDetails(text, url) };
+    } else if (isMarc || (apiKey && apiKey.trim())) {
       try {
         const { object } = await withModelFallback((provider as AIProvider) || "openai", apiKey, (model) =>
           generateObject({
@@ -461,6 +496,102 @@ async function fetchAshbyJob(
   }
 }
 
+interface WorkdayRef {
+  tenant: string;
+  wdServer: string;
+  site: string;
+  externalPath: string;
+}
+
+function parseWorkdayRef(url: string): WorkdayRef | null {
+  const match = url.match(
+    /https?:\/\/([^.]+)\.(wd\d+)\.myworkdayjobs\.com\/(?:[a-z]{2}-[A-Z]{2}\/)?([^/]+)\/job\/([^?#]+)/i
+  );
+  if (!match) return null;
+  return {
+    tenant: match[1],
+    wdServer: match[2],
+    site: match[3],
+    externalPath: match[4],
+  };
+}
+
+function extractSalaryFromDescription(text: string): string | undefined {
+  const patterns = [
+    /base salary range[^.]*?is\s*\$[\d,]+\s*[-–]\s*\$[\d,]+/i,
+    /salary range[^.]*?\$[\d,]+\s*[-–]\s*\$[\d,]+/i,
+    /\$[\d,]+\s*[-–]\s*\$[\d,]+(?:\s+with\s+on-target-earnings|\s+OTE)/i,
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return match[0].replace(/\s+/g, " ").trim();
+  }
+  return undefined;
+}
+
+async function fetchWorkdayJob(
+  ref: WorkdayRef
+): Promise<(JobMeta & { text: string }) | null> {
+  try {
+    const apiUrl = `https://${ref.tenant}.${ref.wdServer}.myworkdayjobs.com/wday/cxs/${ref.tenant}/${ref.site}/job/${ref.externalPath}`;
+    const referer = `https://${ref.tenant}.${ref.wdServer}.myworkdayjobs.com/en-US/${ref.site}`;
+    const res = await fetch(apiUrl, {
+      headers: {
+        Accept: "application/json",
+        "Accept-Language": "en-US",
+        Referer: referer,
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
+      next: { revalidate: 0 },
+      signal: AbortSignal.timeout(DIRECT_FETCH_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.log(`[scrape-job] Workday API HTTP ${res.status} for ${apiUrl}`);
+      return null;
+    }
+
+    const data = (await res.json()) as {
+      jobPostingInfo?: {
+        title?: string;
+        jobDescription?: string;
+        location?: string;
+        additionalLocations?: string[];
+      };
+      hiringOrganization?: { name?: string };
+    };
+
+    const info = data.jobPostingInfo;
+    if (!info?.jobDescription) return null;
+
+    let text = info.jobDescription;
+    if (/<[a-z][\s\S]*>/i.test(text)) {
+      text = extractTextFromHtml(decodeHtmlEntities(text));
+    }
+    text = text.replace(/\s+/g, " ").trim();
+    if (text.length < 200) return null;
+
+    const locations = [
+      info.location,
+      ...(info.additionalLocations || []),
+    ].filter(Boolean);
+    const locationStr = locations.length ? locations.join(", ") : undefined;
+    const remote = locationStr?.toLowerCase().includes("remote") ?? undefined;
+
+    return {
+      text: text.slice(0, 8000),
+      role: info.title,
+      company: data.hiringOrganization?.name || ref.tenant.replace(/-/g, " "),
+      location: locationStr,
+      remote,
+      salaryRange: extractSalaryFromDescription(text),
+    };
+  } catch (err) {
+    console.error("[scrape-job] Workday fetch error:", err);
+    return null;
+  }
+}
+
 async function fetchPageHtml(url: string): Promise<string | null> {
   const res = await fetch(url, {
     headers: {
@@ -470,6 +601,7 @@ async function fetchPageHtml(url: string): Promise<string | null> {
       "Accept-Language": "en-US,en;q=0.9",
     },
     redirect: "follow",
+    signal: AbortSignal.timeout(DIRECT_FETCH_TIMEOUT_MS),
   });
   if (!res.ok || res.url.includes("login") || res.url.includes("sign_in")) return null;
   return res.text();
@@ -594,6 +726,10 @@ function parseJobDetails(text: string, url: string) {
   else if (leverMatch) result.company = leverMatch[1].replace(/-/g, " ");
   else if (workableMatch) result.company = workableMatch[1].replace(/-/g, " ");
   else if (url.includes("elastic.co")) result.company = "Elastic";
+  else {
+    const workdayMatch = url.match(/https?:\/\/([^.]+)\.wd\d+\.myworkdayjobs\.com/i);
+    if (workdayMatch) result.company = workdayMatch[1].replace(/-/g, " ");
+  }
 
   return result;
 }

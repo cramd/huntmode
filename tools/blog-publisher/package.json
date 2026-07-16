@@ -1,0 +1,17 @@
+{
+  "name": "huntmode-blog-publisher",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "blog:publish-ui": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.1.0",
+    "gray-matter": "^4.0.3",
+    "multer": "^2.0.2",
+    "zod": "^4.4.3"
+  }
+}

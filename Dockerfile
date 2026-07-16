@@ -6,6 +6,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
+# Build Astro blog
+COPY blog/package*.json ./blog/
+RUN cd blog && npm ci
+
 # Copy source and build the application
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1

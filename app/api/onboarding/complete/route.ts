@@ -55,6 +55,13 @@ export async function POST(req: NextRequest) {
   const targetIndustry = typeof body.targetIndustry === "string" ? body.targetIndustry.trim() : "";
   const drafts = normalizeDrafts(body.drafts);
   const sectionsRaw = body.sections as MasterResume["sections"] | null | undefined;
+  const aiProviderRaw = body.aiProvider;
+  const aiApiKeyRaw = body.aiApiKey;
+  const aiProvider =
+    aiProviderRaw === "openai" || aiProviderRaw === "anthropic" || aiProviderRaw === "google"
+      ? aiProviderRaw
+      : undefined;
+  const aiApiKey = typeof aiApiKeyRaw === "string" ? aiApiKeyRaw.trim() : "";
 
   if (targetRoles.length === 0 && !targetIndustry) {
     return NextResponse.json(
@@ -119,6 +126,7 @@ export async function POST(req: NextRequest) {
         onboardingCompletedAt: now,
         forceOnboarding: FieldValue.delete(),
         onboardingDismissedAt: FieldValue.delete(),
+        ...(aiApiKey && aiProvider ? { aiProvider, aiApiKey } : {}),
       },
       { merge: true }
     );

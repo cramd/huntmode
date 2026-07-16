@@ -1,19 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminAuth, adminDb, formatAdminError } from "@/lib/firebase-admin";
+import { adminDb, formatAdminError } from "@/lib/firebase-admin";
+import { verifyAdmin } from "@/lib/verify-admin";
 import type { AccessRequest, AccessRequestStatus } from "@/lib/types";
-
-const ADMIN_EMAIL = "marcsherwood@gmail.com";
-
-async function verifyAdmin(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) return false;
-  try {
-    const decoded = await adminAuth.verifyIdToken(authHeader.substring(7));
-    return decoded.email === ADMIN_EMAIL;
-  } catch {
-    return false;
-  }
-}
 
 function mapDoc(id: string, data: Record<string, unknown>): AccessRequest {
   return {
@@ -64,7 +52,10 @@ export async function POST(req: NextRequest) {
 
   const { uid, action } = body;
   if (!uid || (action !== "approve" && action !== "deny")) {
-    return NextResponse.json({ error: "uid and action (approve|deny) are required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "uid and action (approve|deny) are required" },
+      { status: 400 }
+    );
   }
 
   try {
@@ -83,7 +74,11 @@ export async function POST(req: NextRequest) {
     const data = docSnap.data()!;
     return NextResponse.json({
       success: true,
-      request: mapDoc(uid, { ...data, status: newStatus, updatedAt: new Date().toISOString() }),
+      request: mapDoc(uid, {
+        ...data,
+        status: newStatus,
+        updatedAt: new Date().toISOString(),
+      }),
     });
   } catch (error) {
     console.error("[access-requests] POST error:", error);

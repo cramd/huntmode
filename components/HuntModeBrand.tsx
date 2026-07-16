@@ -52,6 +52,7 @@ export function HuntModeBrand({
         alt="HuntMode"
         width={width}
         height={height}
+        loading="eager"
         className={cn(
           "h-full w-full",
           variant === "icon" ? "object-cover object-center" : "object-contain"

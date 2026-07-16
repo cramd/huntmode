@@ -1,0 +1,45 @@
+---
+const nav = [
+  { label: "Home", href: "/" },
+  { label: "About", href: "/about" },
+  { label: "Blog", href: "/blog/" },
+];
+---
+
+<header class="border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
+  <div class="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
+    <a href="/" class="flex items-center gap-3 transition-opacity hover:opacity-90">
+      <img
+        src="/huntmode-logo.png"
+        alt="HuntMode"
+        width="44"
+        height="44"
+        class="h-11 w-11 rounded-xl bg-black object-contain shadow-lg shadow-indigo-500/15"
+      />
+      <div>
+        <p class="text-sm font-bold text-white sm:text-base">HuntMode.ca</p>
+        <p class="text-[10px] font-medium uppercase tracking-[0.18em] text-slate-400">Blog</p>
+      </div>
+    </a>
+
+    <nav class="flex items-center gap-4 text-sm">
+      {nav.map((item) => (
+        <a
+          href={item.href}
+          class:list={[
+            "transition-colors hover:text-white",
+            item.href === "/blog/" ? "font-semibold text-indigo-300" : "text-slate-400",
+          ]}
+        >
+          {item.label}
+        </a>
+      ))}
+      <a
+        href="/dashboard"
+        class="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-bold text-indigo-200 transition-colors hover:bg-indigo-500/20"
+      >
+        Open app
+      </a>
+    </nav>
+  </div>
+</header>

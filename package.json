@@ -4,7 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "blog:dev": "cd blog && npm run dev",
+    "blog:build": "cd blog && npm ci && npm run build",
+    "blog:publish-ui": "node tools/blog-publisher/server.js",
+    "build": "npm run blog:build && next build",
     "start": "next start",
     "lint": "eslint"
   },
@@ -13,6 +16,7 @@
     "@ai-sdk/google": "^3.0.79",
     "@ai-sdk/openai": "^3.0.65",
     "@ai-sdk/react": "^3.0.193",
+    "@astro-community/astro-embed-youtube": "^0.5.10",
     "@base-ui/react": "^1.5.0",
     "@next/third-parties": "^16.2.9",
     "@tailwindcss/postcss": "^4",

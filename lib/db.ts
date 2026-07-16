@@ -21,8 +21,6 @@ import type {
   UserProfile,
   ActivityLog,
   ApplicationStatus,
-  AccessRequest,
-  AccessRequestStatus,
 } from "./types";
 
 // --- Applications ---
@@ -232,37 +230,4 @@ export async function logActivity(
     { ...data, uid, date },
     { merge: true }
   );
-}
-
-// --- Access Requests (admin) ---
-
-export async function getAccessRequests(): Promise<AccessRequest[]> {
-  const snap = await getDocs(collection(db, "accessRequests"));
-  return snap.docs
-    .map((d) => {
-      const data = d.data();
-      return {
-        uid: d.id,
-        email: data.email || "",
-        name: data.name || "Unknown User",
-        status: (data.status || "pending") as AccessRequestStatus,
-        requestedAt: data.requestedAt || "",
-        updatedAt: data.updatedAt,
-      };
-    })
-    .sort((a, b) => {
-      const aTime = new Date(a.requestedAt || 0).getTime();
-      const bTime = new Date(b.requestedAt || 0).getTime();
-      return bTime - aTime;
-    });
-}
-
-export async function updateAccessRequestStatus(
-  uid: string,
-  status: AccessRequestStatus
-): Promise<void> {
-  await updateDoc(doc(db, "accessRequests", uid), {
-    status,
-    updatedAt: new Date().toISOString(),
-  });
 }

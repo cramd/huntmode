@@ -9,3 +9,5 @@ Dockerfile
 deploy.sh
 out
 build
+blog/node_modules
+public/blog

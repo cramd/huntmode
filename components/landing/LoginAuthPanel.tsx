@@ -1,7 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Code2, Lock, ShieldAlert } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart2,
+  Briefcase,
+  Code2,
+  FileText,
+  Flame,
+  Lock,
+  Search,
+  ShieldAlert,
+  Target,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GithubIcon } from "@/components/landing/GithubIcon";
 import { HuntModeBrand } from "@/components/HuntModeBrand";
@@ -18,10 +29,24 @@ import {
   LOCAL_INSTALL_CTA,
   LOCAL_INSTALL_TITLE,
   PRIMARY_CTA,
+  PRODUCT_PILLARS,
   SECONDARY_CTA,
   TRUST_LINE,
   type HeadlineVariant,
+  type ProductPillarIcon,
 } from "@/components/landing/copy";
+
+const PILLAR_ICONS: Record<
+  ProductPillarIcon,
+  React.ComponentType<{ className?: string }>
+> = {
+  briefcase: Briefcase,
+  barChart: BarChart2,
+  search: Search,
+  fileText: FileText,
+  target: Target,
+  flame: Flame,
+};
 
 interface LoginAuthPanelProps {
   headlineVariant?: HeadlineVariant;
@@ -64,7 +89,23 @@ export function LoginAuthPanel({
   return (
     <div className="relative flex min-h-screen flex-col overflow-visible px-6 pb-8 pt-6 sm:px-10 sm:pt-8 lg:px-14 lg:pb-10 lg:pt-8">
       <div className="mx-auto w-full max-w-md space-y-6">
-        <HuntModeBrand variant="stacked" href="/" className="items-start text-left" />
+        <div className="flex items-start justify-between gap-4">
+          <HuntModeBrand variant="stacked" href="/" className="items-start text-left" />
+          <nav className="flex items-center gap-4 pt-1 text-sm">
+            <Link
+              href="/blog/"
+              className="font-medium text-slate-400 transition-colors hover:text-white"
+            >
+              Blog
+            </Link>
+            <Link
+              href={LEARN_MORE_HREF}
+              className="font-medium text-slate-400 transition-colors hover:text-white"
+            >
+              About
+            </Link>
+          </nav>
+        </div>
 
         <div className="space-y-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-400/80">
@@ -75,6 +116,26 @@ export function LoginAuthPanel({
           </h1>
           <p className="text-base leading-relaxed text-slate-400">{subhead}</p>
         </div>
+
+        <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          {PRODUCT_PILLARS.map((pillar) => {
+            const Icon = PILLAR_ICONS[pillar.icon];
+            return (
+              <li
+                key={pillar.title}
+                className="flex gap-2.5 rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2.5"
+              >
+                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400/80" />
+                <div className="min-w-0 space-y-0.5">
+                  <p className="text-xs font-bold text-white">{pillar.title}</p>
+                  <p className="text-[11px] leading-snug text-slate-500">
+                    {pillar.description}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
 
           {authError && (
             <div className="flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 p-4">

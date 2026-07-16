@@ -1,5 +1,8 @@
 import { adminDb } from "@/lib/firebase-admin";
+import { getAdminUserRows, type AdminUserRow } from "@/lib/admin-user-stats";
 import { getSignupRateLimitStatus } from "@/lib/signup-rate-limit";
+
+export type { AdminUserRow };
 
 export type SignupStats = {
   totalUsers: number;
@@ -10,6 +13,7 @@ export type SignupStats = {
   signupLimit: number;
   slotsRemaining: number;
   windowResetsAt: string;
+  users: AdminUserRow[];
 };
 
 export async function getSignupStats(): Promise<SignupStats> {
@@ -25,7 +29,10 @@ export async function getSignupStats(): Promise<SignupStats> {
     else if (status === "pending") pending += 1;
   }
 
-  const rate = await getSignupRateLimitStatus();
+  const [rate, users] = await Promise.all([
+    getSignupRateLimitStatus(),
+    getAdminUserRows(snapshot.docs),
+  ]);
 
   return {
     totalUsers: snapshot.size,
@@ -33,5 +40,6 @@ export async function getSignupStats(): Promise<SignupStats> {
     denied,
     pending,
     ...rate,
+    users,
   };
 }

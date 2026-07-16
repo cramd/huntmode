@@ -1,0 +1,69 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import PostCard from "../components/PostCard.astro";
+import { BLOG_CATEGORIES, CATEGORY_LABELS } from "../content.config";
+import { categoryHref, isPublished } from "../lib/blog";
+
+const allPosts = (await getCollection("blog"))
+  .filter((post) => isPublished(post.data.draft))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+const featuredPosts = allPosts.filter((post) => post.data.featured).slice(0, 2);
+const latestPosts = allPosts.filter((post) => !post.data.featured || !featuredPosts.includes(post));
+---
+
+<BaseLayout
+  title="HuntMode Blog | Job search intel, tips, and product updates"
+  description="Product updates, job search tips, industry news, and guest voices from recruiters. Your pulse on what's new in the job hunt."
+  canonicalPath="/blog/"
+>
+  <section class="mx-auto max-w-5xl px-6 py-12">
+    <div class="mb-10 max-w-3xl">
+      <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-300">HuntMode Blog</p>
+      <h1 class="text-4xl font-bold tracking-tight text-white sm:text-5xl">
+        What's new in the job hunt
+      </h1>
+      <p class="mt-4 text-lg leading-relaxed text-slate-400">
+        Product updates from HuntMode, practical tips for your search, industry shifts worth watching,
+        and guest voices from recruiters in the field.
+      </p>
+    </div>
+
+    <div class="mb-10 flex flex-wrap gap-2">
+      {BLOG_CATEGORIES.map((category) => (
+        <a
+          href={categoryHref(category)}
+          class="rounded-full border border-white/10 bg-slate-900/60 px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:border-indigo-500/30 hover:text-white"
+        >
+          {CATEGORY_LABELS[category]}
+        </a>
+      ))}
+    </div>
+
+    {featuredPosts.length > 0 && (
+      <section class="mb-12">
+        <h2 class="mb-4 text-sm font-bold uppercase tracking-wider text-slate-500">Featured</h2>
+        <div class="grid gap-4 md:grid-cols-2">
+          {featuredPosts.map((post) => (
+            <PostCard post={post} />
+          ))}
+        </div>
+      </section>
+    )}
+
+    <section>
+      <h2 class="mb-4 text-sm font-bold uppercase tracking-wider text-slate-500">Latest</h2>
+      <div class="grid gap-4 md:grid-cols-2">
+        {latestPosts.map((post) => (
+          <PostCard post={post} />
+        ))}
+      </div>
+      {latestPosts.length === 0 && (
+        <p class="rounded-2xl border border-white/10 bg-slate-900/40 p-8 text-center text-slate-500">
+          Posts are on the way. Check back soon.
+        </p>
+      )}
+    </section>
+  </section>
+</BaseLayout>

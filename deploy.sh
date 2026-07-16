@@ -4,12 +4,13 @@ set -e
 SERVER="fileman@192.168.0.62"
 REMOTE_DIR="/home/fileman/huntmode"
 
-echo "🔨 Building HuntMode locally on Mac..."
+echo "🔨 Building HuntMode (blog + app)..."
 npm run build
 
 echo "📦 Syncing build and source files to server..."
 rsync -avz --progress \
   --exclude node_modules \
+  --exclude blog/node_modules \
   --exclude .git \
   --exclude .env.local \
   --exclude .next/cache \

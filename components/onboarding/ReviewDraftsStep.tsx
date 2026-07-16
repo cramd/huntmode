@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,22 +8,20 @@ import type { OnboardingDraftSuggestion } from "@/lib/types";
 
 interface ReviewDraftsStepProps {
   drafts: OnboardingDraftSuggestion[];
-  completing: boolean;
   error: string | null;
   onUpdateDraft: (index: number, patch: Partial<OnboardingDraftSuggestion>) => void;
   onRemoveDraft: (index: number) => void;
   onBack: () => void;
-  onComplete: () => void;
+  onContinue: () => void;
 }
 
 export function ReviewDraftsStep({
   drafts,
-  completing,
   error,
   onUpdateDraft,
   onRemoveDraft,
   onBack,
-  onComplete,
+  onContinue,
 }: ReviewDraftsStepProps) {
   return (
     <div className="space-y-6">
@@ -95,23 +93,16 @@ export function ReviewDraftsStep({
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-        <Button type="button" variant="ghost" onClick={onBack} disabled={completing} className="text-slate-400 hover:text-white">
+        <Button type="button" variant="ghost" onClick={onBack} className="text-slate-400 hover:text-white">
           Back
         </Button>
         <Button
           type="button"
-          onClick={onComplete}
-          disabled={completing || drafts.length === 0}
+          onClick={onContinue}
+          disabled={drafts.length === 0}
           className="bg-gradient-to-r from-indigo-600 to-purple-600 font-bold text-white hover:from-indigo-500 hover:to-purple-500"
         >
-          {completing ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Setting up your hunt…
-            </>
-          ) : (
-            "Start hunting"
-          )}
+          Continue
         </Button>
       </div>
     </div>

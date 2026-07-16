@@ -18,9 +18,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HuntMode | Interview Prep HUD",
+  title: "HuntMode | AI Job Hunt Assistant",
   description:
-    "Paste your CV and the job description. Get a live interview HUD you can read while you talk. Free forever · BYOK · résumé and JD stay on your machine.",
+    "Track applications, score role fit, tailor résumés and cover letters, find similar roles, and prep with a live interview HUD. Free forever · BYOK · your data stays local.",
   icons: {
     icon: "/huntmode-logo.png",
     apple: "/huntmode-logo.png",

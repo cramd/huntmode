@@ -19,14 +19,21 @@ service cloud.firestore {
         request.auth.token.email_verified == true;
     }
 
+    // Other-user directory / access control — admin only.
     match /accessRequests/{uid} {
       allow read, write: if isAdmin();
     }
 
+    // Each user may only read/write their own data tree.
     match /users/{uid}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid && isApproved(uid);
     }
-    
+
+    // System docs (signup rate limit, etc.) — never readable from clients.
+    match /system/{document=**} {
+      allow read, write: if false;
+    }
+
     // Allow the Rock Tracker demo app to write to the global rocks collection
     match /rocks/{document=**} {
       allow read, write: if request.auth != null;

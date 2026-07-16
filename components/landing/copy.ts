@@ -1,33 +1,48 @@
 export type HeadlineVariant = 1 | 2 | 3 | 4;
 
+export type ProductPillarIcon =
+  | "briefcase"
+  | "barChart"
+  | "search"
+  | "fileText"
+  | "target"
+  | "flame";
+
+export type ProductPillar = {
+  icon: ProductPillarIcon;
+  title: string;
+  description: string;
+};
+
 export const HEADLINE_VARIANTS: Record<
   HeadlineVariant,
   { headline: string; subhead: string }
 > = {
   1: {
-    headline: "Stop blanking mid-interview.",
+    headline: "Track roles. Score the fit. Walk in prepared.",
     subhead:
-      "Paste your CV and the job description. Get a live HUD you can actually read while you talk.",
+      "Pipeline, fit analysis, one-click tailoring, and a live interview HUD — free forever, BYOK, your data stays local.",
   },
   2: {
-    headline: "Hope is not an interview strategy.",
+    headline: "Your job hunt, finally in one place.",
     subhead:
-      "Turn résumé + JD into a scannable battleboard before the call — and keep it open during the call.",
+      "Track every application, prioritize with AI fit scores, tailor docs from a master résumé, and open a battleboard before the call.",
   },
   3: {
-    headline: "Your talking points, on glass.",
+    headline: "Stop guessing which roles are worth your time.",
     subhead:
-      "HuntMode distills prep into four panels: battlecard, topics, closing questions, and pacing.",
+      "Analyze Fit against your background, find similar openings, generate targeted CVs — then prep with a HUD you can read while you talk.",
   },
   4: {
-    headline: "Forty-five minutes in, still sharp.",
-    subhead: 'When they ask "Any questions for us?" — you\'ll already have them.',
+    headline: "From application to interview, without the chaos.",
+    subhead:
+      "Status tracking, fit scoring, tailored documents, streaks that keep momentum visible — plus an interview HUD for game day.",
   },
 };
 
 export const DEFAULT_HEADLINE_VARIANT: HeadlineVariant = 1;
 
-export const EYEBROW = "FREE · BYOK · INTERVIEW PREP HUD";
+export const EYEBROW = "FREE · BYOK · AI JOB HUNT ASSISTANT";
 
 export const PRIMARY_CTA = "Sign in with Google";
 export const SECONDARY_CTA = "Sign in with GitHub";
@@ -39,35 +54,47 @@ export const TRUST_LINE =
 export const ERROR_BANNER_FALLBACK =
   "Sign-in failed. Check your connection or try email link instead.";
 
-export const WHAT_YOU_GET = [
+export const PRODUCT_PILLARS: ProductPillar[] = [
   {
-    title: "Quick Battlecard",
-    description: "One-glance strategy before you join the call",
+    icon: "briefcase",
+    title: "Track applications",
+    description: "Pipeline, status, and notes for every role you pursue",
   },
   {
-    title: "Topic Clusters",
-    description: "JD themes mapped to your bullets",
+    icon: "barChart",
+    title: "Analyze Fit",
+    description: "AI fit score with strengths, gaps, and overall %",
   },
   {
-    title: "Closing Questions",
-    description: "Strategic questions ready before they ask",
+    icon: "search",
+    title: "Find Similar Roles",
+    description: "Discover openings that match roles you already like",
   },
   {
-    title: "Pacing & Coverage",
-    description: "Timer + checkoffs so you don't leave themes on the table",
+    icon: "fileText",
+    title: "Tailor resume & cover letter",
+    description: "One-click docs adapted from your master résumé",
   },
-] as const;
+  {
+    icon: "target",
+    title: "Interview prep HUD",
+    description: "Battlecard, topics, closing questions, and pacing",
+  },
+  {
+    icon: "flame",
+    title: "Streaks & weekly goals",
+    description: "Heatmaps and targets so momentum stays visible",
+  },
+];
+
+/** Subset for the desktop showcase footer grid */
+export const WHAT_YOU_GET = PRODUCT_PILLARS.slice(0, 4);
 
 export const BYOK_BADGE = "BYOK · YOUR KEYS NEVER LEAVE YOUR BROWSER";
 
-export const MOBILE_SUMMARY_TITLE = "Your interview HUD";
+export const MOBILE_SUMMARY_TITLE = "Your full hunt toolkit";
 
-export const MOBILE_BULLETS = [
-  { label: "Battlecard", description: "re-center on why you're the fit" },
-  { label: "Topics", description: "scan JD themes mapped to your experience" },
-  { label: "Closing Qs", description: "no blank stare at the end" },
-  { label: "Pacing", description: "timer + coverage so nothing's left unsaid" },
-] as const;
+export const MOBILE_BULLETS = PRODUCT_PILLARS;
 
 export const MOBILE_TRUST = "Free · BYOK · local-first";
 

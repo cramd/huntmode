@@ -1,0 +1,50 @@
+---
+import type { CollectionEntry } from "astro:content";
+import CategoryBadge from "./CategoryBadge.astro";
+import { formatDate, postHref } from "../lib/blog";
+import { DEFAULT_OG_IMAGE } from "../lib/seo";
+
+interface Props {
+  post: CollectionEntry<"blog">;
+}
+
+const { post } = Astro.props;
+const { title, description, pubDate, category, featured, coverImage, ogImage, coverImageAlt } =
+  post.data;
+const cardImage = coverImage ?? ogImage ?? DEFAULT_OG_IMAGE;
+const cardAlt = coverImageAlt ?? title;
+---
+
+<article class="group overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 transition-colors hover:border-indigo-500/30 hover:bg-slate-900/80">
+  <a href={postHref(post.id)} class="block">
+    <img
+      src={cardImage}
+      alt={cardAlt}
+      width="640"
+      height="336"
+      loading="lazy"
+      decoding="async"
+      class="aspect-[1200/630] w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+    />
+  </a>
+  <div class="p-5">
+    <div class="mb-3 flex flex-wrap items-center gap-2">
+      <CategoryBadge category={category} />
+      {featured && (
+        <span class="rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-200">
+          Featured
+        </span>
+      )}
+    </div>
+    <h2 class="mb-2 text-lg font-bold text-white group-hover:text-indigo-100">
+      <a href={postHref(post.id)} class="hover:underline">{title}</a>
+    </h2>
+    <p class="mb-4 line-clamp-2 text-sm text-slate-400">{description}</p>
+    <div class="flex items-center justify-between text-xs text-slate-500">
+      <span>{formatDate(pubDate)}</span>
+      <a href={postHref(post.id)} class="font-semibold text-indigo-300 transition-colors hover:text-indigo-200">
+        Read →
+      </a>
+    </div>
+  </div>
+</article>

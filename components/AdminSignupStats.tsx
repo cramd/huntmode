@@ -1,20 +1,65 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { BarChart3, Loader2, RefreshCw, Users, UserCheck, UserX, Clock } from "lucide-react";
+import {
+  BarChart3,
+  Loader2,
+  RefreshCw,
+  Users,
+  UserCheck,
+  UserX,
+  Clock,
+  Check,
+  X,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
-import type { SignupStats } from "@/lib/signup-stats";
-
-const ADMIN_EMAIL = "marcsherwood@gmail.com";
+import { isAdminEmail } from "@/lib/is-admin";
+import type { AdminUserRow, SignupStats } from "@/lib/signup-stats";
+import type { AccessRequestStatus } from "@/lib/types";
 
 function formatResetTime(iso: string) {
   return new Date(iso).toLocaleTimeString(undefined, {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function formatJoined(iso: string) {
+  if (!iso) return "Unknown";
+  return new Date(iso).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function StatusBadge({ status }: { status: AccessRequestStatus }) {
+  if (status === "pending") {
+    return (
+      <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/15 text-[10px]">
+        <Clock className="w-3 h-3 mr-1" />
+        Pending
+      </Badge>
+    );
+  }
+  if (status === "approved") {
+    return (
+      <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/15 text-[10px]">
+        <UserCheck className="w-3 h-3 mr-1" />
+        Approved
+      </Badge>
+    );
+  }
+  return (
+    <Badge className="bg-red-500/15 text-red-300 border-red-500/30 hover:bg-red-500/15 text-[10px]">
+      <UserX className="w-3 h-3 mr-1" />
+      Denied
+    </Badge>
+  );
 }
 
 function StatTile({
@@ -46,13 +91,82 @@ function StatTile({
   );
 }
 
+function UserDirectoryTable({ users }: { users: AdminUserRow[] }) {
+  const totalApps = users.reduce((sum, u) => sum + u.applicationCount, 0);
+
+  return (
+    <div className="space-y-3 pt-2 border-t border-white/5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+          All users
+        </p>
+        <span className="text-[10px] text-slate-500">
+          {users.length} account{users.length === 1 ? "" : "s"} · {totalApps} application
+          {totalApps === 1 ? "" : "s"} total
+        </span>
+      </div>
+
+      {users.length === 0 ? (
+        <p className="text-sm text-slate-500 text-center py-4">No registered accounts yet.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-white/5">
+          <table className="w-full min-w-[540px] text-left text-xs">
+            <thead>
+              <tr className="border-b border-white/5 bg-slate-950/60 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                <th className="px-3 py-2.5 font-bold">User</th>
+                <th className="px-3 py-2.5 font-bold">Status</th>
+                <th className="px-3 py-2.5 font-bold">Joined</th>
+                <th className="px-3 py-2.5 font-bold text-right">Apps</th>
+                <th className="px-3 py-2.5 font-bold text-center">Onboarded</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((row) => (
+                <tr
+                  key={row.uid}
+                  className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
+                >
+                  <td className="px-3 py-2.5">
+                    <p className="font-semibold text-slate-200 truncate max-w-[180px]">
+                      {row.name}
+                    </p>
+                    <p className="text-[10px] text-slate-500 truncate max-w-[180px]">
+                      {row.email}
+                    </p>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <StatusBadge status={row.status} />
+                  </td>
+                  <td className="px-3 py-2.5 text-slate-400 whitespace-nowrap">
+                    {formatJoined(row.requestedAt)}
+                  </td>
+                  <td className="px-3 py-2.5 text-right font-bold text-white tabular-nums">
+                    {row.applicationCount}
+                  </td>
+                  <td className="px-3 py-2.5 text-center">
+                    {row.onboardingCompleted ? (
+                      <Check className="w-4 h-4 text-emerald-400 inline-block" aria-label="Yes" />
+                    ) : (
+                      <X className="w-4 h-4 text-slate-600 inline-block" aria-label="No" />
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AdminSignupStats() {
   const { user } = useAuth();
   const [stats, setStats] = useState<SignupStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  const isAdmin = isAdminEmail(user?.email);
 
   const loadStats = useCallback(
     async (silent = false) => {
@@ -94,7 +208,7 @@ export function AdminSignupStats() {
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2 text-sm font-bold text-white tracking-wide uppercase">
             <BarChart3 className="w-4 h-4 text-indigo-400" />
-            Sign-up Activity
+            Users &amp; sign-ups
           </CardTitle>
           <Button
             type="button"
@@ -163,8 +277,8 @@ export function AdminSignupStats() {
                 />
               </div>
               <p className="text-[10px] text-slate-400">
-                {stats.slotsRemaining} slot{stats.slotsRemaining === 1 ? "" : "s"} left · resets around{" "}
-                {formatResetTime(stats.windowResetsAt)}
+                {stats.slotsRemaining} slot{stats.slotsRemaining === 1 ? "" : "s"} left · resets
+                around {formatResetTime(stats.windowResetsAt)}
               </p>
             </div>
 
@@ -184,6 +298,8 @@ export function AdminSignupStats() {
                 </span>
               )}
             </div>
+
+            <UserDirectoryTable users={stats.users ?? []} />
           </>
         ) : (
           <p className="text-sm text-slate-500 text-center py-6">Could not load sign-up stats.</p>

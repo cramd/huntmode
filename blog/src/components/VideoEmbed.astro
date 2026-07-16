@@ -1,0 +1,68 @@
+---
+import { YouTube } from "@astro-community/astro-embed-youtube";
+
+interface Props {
+  url: string;
+  title: string;
+}
+
+const { url, title } = Astro.props;
+
+function isYouTubeUrl(videoUrl: string): boolean {
+  try {
+    const parsed = new URL(videoUrl);
+    return parsed.hostname.includes("youtube.com") || parsed.hostname.includes("youtu.be");
+  } catch {
+    return false;
+  }
+}
+
+function getVimeoEmbedUrl(videoUrl: string): string | null {
+  try {
+    const parsed = new URL(videoUrl);
+    if (!parsed.hostname.includes("vimeo.com")) return null;
+    const id = parsed.pathname.split("/").filter(Boolean).pop();
+    return id ? `https://player.vimeo.com/video/${id}` : null;
+  } catch {
+    return null;
+  }
+}
+
+const youtube = isYouTubeUrl(url);
+const vimeoEmbedUrl = youtube ? null : getVimeoEmbedUrl(url);
+---
+
+{youtube ? (
+  <div class="video-embed overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl shadow-indigo-500/10">
+    <YouTube id={url} title={title} playlabel={`Play video: ${title}`} />
+  </div>
+) : vimeoEmbedUrl ? (
+  <div class="overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl shadow-indigo-500/10">
+    <div class="aspect-video">
+      <iframe
+        src={vimeoEmbedUrl}
+        title={title}
+        class="h-full w-full"
+        loading="lazy"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+      />
+    </div>
+  </div>
+) : (
+  <a
+    href={url}
+    target="_blank"
+    rel="noopener noreferrer"
+    class="inline-flex items-center gap-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-3 text-sm font-semibold text-indigo-200 transition-colors hover:bg-indigo-500/20"
+  >
+    Watch video interview →
+  </a>
+)}
+
+<style>
+  .video-embed :global(lite-youtube) {
+    max-width: none;
+    width: 100%;
+  }
+</style>

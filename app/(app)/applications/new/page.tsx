@@ -32,6 +32,8 @@ import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
 import { type MasterResume, type UserProfile, CATEGORY_CONFIG } from "@/lib/types";
 import { toast } from "sonner";
 import { useEffect } from "react";
+import { WorkdayFetchNotice } from "@/components/WorkdayFetchNotice";
+import { isWorkdayJobUrl } from "@/lib/job-url";
 
 export function getCategoryIcon(iconName: string) {
   switch (iconName) {
@@ -140,6 +142,8 @@ export default function NewApplicationPage() {
         if (data.remote !== undefined) update("remote", data.remote);
         if (data.source === "jina") {
           toast.success("Job loaded via enhanced reader");
+        } else if (data.source === "workday") {
+          toast.success("Job loaded from Workday");
         } else if (data.source === "greenhouse") {
           toast.success("Job loaded from Greenhouse API");
         } else if (data.source === "lever") {
@@ -349,7 +353,8 @@ export default function NewApplicationPage() {
                 <p className="text-xs font-bold text-indigo-300">Tip: paste the job URL and click Fetch Job</p>
                 <p className="text-xs text-slate-400 leading-relaxed">
                   We&apos;ll pull the company, role, and description automatically for most postings
-                  (Lever, Greenhouse, Workable, Ashby, and most company career pages).
+                  (Lever, Greenhouse, Workable, Ashby, Workday, and most company career pages).
+                  Workday links can take a bit longer — paste the description manually to skip the wait.
                   LinkedIn and Indeed require login — for those, paste the description manually below.
                 </p>
               </div>
@@ -376,9 +381,14 @@ export default function NewApplicationPage() {
                   ) : (
                     <Link2 className="w-4 h-4 mr-2 text-indigo-400" />
                   )}
-                  {scraping ? "Fetching..." : "Fetch Job"}
+                  {scraping
+                    ? isWorkdayJobUrl(form.jobUrl)
+                      ? "Fetching from Workday…"
+                      : "Fetching job description…"
+                    : "Fetch Job"}
                 </Button>
               </div>
+              <WorkdayFetchNotice jobUrl={form.jobUrl} />
               {scrapeError && (
                 <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2">
                   <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { LoginAuthPanel } from "@/components/landing/LoginAuthPanel";
-import { HudPreviewMocks } from "@/components/landing/HudPreviewMocks";
+import { LandingProductShowcase } from "@/components/landing/LandingProductShowcase";
 import { MobileProductSummary } from "@/components/landing/MobileProductSummary";
 import { Button } from "@/components/ui/button";
 
@@ -57,7 +57,7 @@ export default function LandingPage() {
           onSignInWithGoogle={signInWithGoogle}
           onSignInWithGithub={signInWithGithub}
         />
-        <HudPreviewMocks />
+        <LandingProductShowcase />
         <div className="lg:col-span-2 lg:hidden">
           <MobileProductSummary />
         </div>

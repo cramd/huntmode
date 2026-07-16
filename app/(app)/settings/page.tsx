@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, Key, User, Target, Loader2, ExternalLink } from "lucide-react";
+import { Save, Key, User, Target, Loader2 } from "lucide-react";
+import { ApiKeyInstructions, apiKeyPlaceholder } from "@/components/ApiKeyInstructions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/context/AuthContext";
 import { getUserProfile, saveUserProfile } from "@/lib/db";
+import { isAdminEmail } from "@/lib/is-admin";
 import type { UserProfile } from "@/lib/types";
 import { toast } from "sonner";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
@@ -23,6 +25,7 @@ import { AdminSignupStats } from "@/components/AdminSignupStats";
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  const isAdmin = isAdminEmail(user?.email);
   const [profile, setProfile] = useState<Partial<UserProfile>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -55,7 +58,11 @@ export default function SettingsPage() {
       if (!res.ok) {
         throw new Error(data.error || "Key validation failed");
       }
-      toast.success("API Key is valid and working!");
+      toast.success(
+        data.chatModelId
+          ? `API key validated. Practice Coach will use ${data.chatModelId}.`
+          : "API Key is valid and working!"
+      );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Invalid key";
       toast.error(`Validation failed: ${msg}`);
@@ -89,7 +96,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-5">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-5">
       <div className="flex flex-col border-b border-white/5 pb-5">
         <h1 className="text-2xl font-black text-white tracking-tight">
           Settings
@@ -99,9 +106,12 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <AdminSignupStats />
-
-      <AdminAccessRequests />
+      {isAdmin && (
+        <>
+          <AdminSignupStats />
+          <AdminAccessRequests />
+        </>
+      )}
 
       {/* Profile */}
       <Card className="bg-slate-900/40 border-white/5 shadow-xl rounded-2xl overflow-hidden">
@@ -220,13 +230,7 @@ export default function SettingsPage() {
                       setProfile((p) => ({ ...p, aiApiKey: val }));
                     }
                   }}
-                  placeholder={
-                    profile.aiProvider === "anthropic"
-                      ? "Enter sk-ant-... to update"
-                      : profile.aiProvider === "google"
-                      ? "Enter AIzaSy... to update"
-                      : "Enter sk-... to update"
-                  }
+                  placeholder={apiKeyPlaceholder(profile.aiProvider || "openai")}
                   className="bg-slate-950/60 border-white/5 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500 text-white rounded-xl placeholder:text-slate-655 font-mono text-sm"
                 />
               </div>
@@ -247,64 +251,7 @@ export default function SettingsPage() {
                 )}
               </Button>
             </div>
-            {(profile.aiProvider || "openai") === "google" && (
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 space-y-2.5">
-                <p className="text-xs font-bold text-emerald-300">
-                  How to get a Gemini API key
-                </p>
-                <ol className="list-decimal list-inside space-y-1.5 text-[11px] leading-relaxed text-slate-400">
-                  <li>
-                    Open{" "}
-                    <a
-                      href="https://aistudio.google.com/api-keys"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-0.5 font-semibold text-indigo-300 hover:text-indigo-200 underline-offset-2 hover:underline"
-                    >
-                      Google AI Studio → API keys
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </li>
-                  <li>Sign in with your Google account and accept the terms if prompted.</li>
-                  <li>
-                    Click <strong className="text-slate-300">Create API key</strong> (new project is
-                    fine for first-time setup).
-                  </li>
-                  <li>
-                    Copy the key (starts with <code className="font-mono text-slate-300">AIza…</code>
-                    ) and paste it above, then tap <strong className="text-slate-300">Test Key</strong>.
-                  </li>
-                </ol>
-                <p className="text-[10px] text-slate-500 leading-relaxed">
-                  Your key needs access to{" "}
-                  <code className="rounded bg-slate-950 px-1 py-0.5 font-mono text-slate-300">
-                    gemini-3.5-flash
-                  </code>{" "}
-                  (primary). HuntMode may also fall back to{" "}
-                  <code className="rounded bg-slate-950 px-1 py-0.5 font-mono text-slate-300">
-                    gemini-3.1-flash-lite
-                  </code>{" "}
-                  and{" "}
-                  <code className="rounded bg-slate-950 px-1 py-0.5 font-mono text-slate-300">
-                    gemini-flash-latest
-                  </code>
-                  . Keys created in AI Studio include these Gemini models by default.
-                </p>
-                <p className="text-[10px] text-slate-500 leading-relaxed">
-                  Free tier works for light use. Keys stay in your profile and are only sent with
-                  your AI requests — never shared with other users.
-                </p>
-                <a
-                  href="https://ai.google.dev/gemini-api/docs/api-key"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400 hover:text-slate-200"
-                >
-                  Official Gemini API key docs
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-            )}
+            <ApiKeyInstructions provider={profile.aiProvider || "openai"} />
 
             <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
               Your API key is stored in your personal Firestore document and only used for your

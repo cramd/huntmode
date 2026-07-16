@@ -14,8 +14,8 @@ export function MobileProductSummary({ className }: { className?: string }) {
       </h2>
       <ul className="mt-4 space-y-3">
         {MOBILE_BULLETS.map((item) => (
-          <li key={item.label} className="flex gap-2 text-sm text-slate-300">
-            <span className="font-bold text-white shrink-0">{item.label}</span>
+          <li key={item.title} className="flex gap-2 text-sm text-slate-300">
+            <span className="shrink-0 font-bold text-white">{item.title}</span>
             <span className="text-slate-500">—</span>
             <span className="text-slate-400">{item.description}</span>
           </li>

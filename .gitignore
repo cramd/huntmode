@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+**/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -19,16 +20,23 @@
 
 # production
 /build
+/public/blog
+
+# astro blog
+blog/node_modules
+blog/dist
 
 # misc
 .DS_Store
 *.pem
+.cursor/
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+.cursor/debug-*.log
 
 # env files (can opt-in for committing if needed)
 .env*

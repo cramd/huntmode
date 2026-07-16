@@ -15,11 +15,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
-import { getAccessRequests, updateAccessRequestStatus } from "@/lib/db";
+import { isAdminEmail } from "@/lib/is-admin";
 import type { AccessRequest } from "@/lib/types";
 import { toast } from "sonner";
-
-const ADMIN_EMAIL = "marcsherwood@gmail.com";
 
 function formatDate(iso: string) {
   if (!iso) return "Unknown";
@@ -65,35 +63,54 @@ export function AdminAccessRequests() {
   const [refreshing, setRefreshing] = useState(false);
   const [actingOn, setActingOn] = useState<string | null>(null);
 
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  const isAdmin = isAdminEmail(user?.email);
 
-  const loadRequests = useCallback(async (silent = false) => {
-    if (!user || !isAdmin) return;
-    if (silent) setRefreshing(true);
-    else setLoading(true);
-    try {
-      const data = await getAccessRequests();
-      setRequests(data);
-      setPendingCount(data.filter((r) => r.status === "pending").length);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to load access requests";
-      toast.error(msg);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [user, isAdmin]);
+  const loadRequests = useCallback(
+    async (silent = false) => {
+      if (!user || !isAdmin) return;
+      if (silent) setRefreshing(true);
+      else setLoading(true);
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch("/api/auth/access-requests", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to load access requests");
+        setRequests(data.requests ?? []);
+        setPendingCount(data.pendingCount ?? 0);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Failed to load access requests";
+        toast.error(msg);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [user, isAdmin]
+  );
 
   useEffect(() => {
     if (isAdmin) loadRequests();
   }, [isAdmin, loadRequests]);
 
   const handleAction = async (uid: string, action: "approve" | "deny") => {
-    if (!user) return;
+    if (!user || !isAdmin) return;
     setActingOn(uid);
     try {
+      const token = await user.getIdToken();
+      const res = await fetch("/api/auth/access-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ uid, action }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update request");
+
       const newStatus = action === "approve" ? "approved" : "denied";
-      await updateAccessRequestStatus(uid, newStatus);
       setRequests((prev) =>
         prev.map((r) =>
           r.uid === uid

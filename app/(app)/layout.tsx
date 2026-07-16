@@ -3,18 +3,21 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Menu, ShieldAlert, RefreshCw, LogOut, Plus, Clock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { getUserProfile, getApplications, getMasterResumes } from "@/lib/db";
 import { needsOnboarding } from "@/lib/onboarding";
+import { userHasAiApiKey } from "@/lib/has-ai-key";
 import Sidebar from "@/components/Sidebar";
 import { HuntModeBrand } from "@/components/HuntModeBrand";
+import { ApiKeyBanner } from "@/components/ApiKeyBanner";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import type { UserProfile } from "@/lib/types";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const {
@@ -25,12 +28,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     logout,
   } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -70,6 +75,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           router.replace("/onboarding");
           return;
         }
+        setUserProfile(profile);
         setOnboardingChecked(true);
       } catch {
         if (!cancelled) setOnboardingChecked(true);
@@ -79,6 +85,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
   }, [user, loading, accessStatus, router]);
+
+  useEffect(() => {
+    if (!user || !onboardingChecked) return;
+    getUserProfile(user.uid).then((profile) => {
+      if (profile) setUserProfile(profile);
+    });
+  }, [pathname, user, onboardingChecked]);
 
   const handleToggleCollapse = () => {
     setIsCollapsed((prev) => {
@@ -265,6 +278,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             !isMounted && "md:pl-64"
           )}
         >
+          {!userHasAiApiKey(user.email, userProfile) && <ApiKeyBanner />}
           {children}
         </main>
 

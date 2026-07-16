@@ -1,0 +1,131 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import PostCover from "../components/PostCover.astro";
+import PostMeta from "../components/PostMeta.astro";
+import VideoEmbed from "../components/VideoEmbed.astro";
+import SyndicationBanner from "../components/SyndicationBanner.astro";
+import AuthorCard from "../components/AuthorCard.astro";
+import { categoryLabel } from "../lib/blog";
+import {
+  buildArticleJsonLd,
+  estimateReadingTime,
+  formatIsoDate,
+  resolveAbsoluteUrl,
+  resolveOgImage,
+} from "../lib/seo";
+import type { CollectionEntry } from "astro:content";
+
+interface Props {
+  post: CollectionEntry<"blog">;
+}
+
+const { post } = Astro.props;
+const {
+  title,
+  description,
+  pubDate,
+  updatedDate,
+  category,
+  author,
+  authorTitle,
+  guestAuthor,
+  syndicatedFrom,
+  videoUrl,
+  tags,
+  coverImage,
+  coverImageAlt,
+  coverCaption,
+  seoTitle,
+  seoDescription,
+  keywords,
+  ogImage,
+  canonicalUrl,
+  robots,
+  readingTimeMinutes,
+} = post.data;
+
+const slug = post.id.replace(/\.md$/, "");
+const canonicalPath = `/blog/${slug}/`;
+const pageUrl = resolveAbsoluteUrl(canonicalPath, Astro.site?.href);
+const resolvedCover = coverImage ?? ogImage;
+const coverAlt = coverImageAlt ?? title;
+const metaTitle = seoTitle ?? `${title} | HuntMode Blog`;
+const metaDescription = seoDescription ?? description;
+const mergedKeywords = [...new Set([...keywords, ...tags])];
+const readingTime = readingTimeMinutes ?? estimateReadingTime(post.body ?? "");
+const socialImage = resolveOgImage({
+  ogImage,
+  coverImage,
+  site: Astro.site?.href,
+});
+
+const jsonLd = buildArticleJsonLd({
+  title,
+  description: metaDescription,
+  url: canonicalUrl ?? pageUrl,
+  image: socialImage,
+  datePublished: formatIsoDate(pubDate),
+  dateModified: updatedDate ? formatIsoDate(updatedDate) : undefined,
+  author,
+  section: categoryLabel(category),
+  keywords: mergedKeywords,
+});
+---
+
+<BaseLayout
+  title={metaTitle}
+  description={metaDescription}
+  canonicalPath={canonicalPath}
+  canonicalUrl={canonicalUrl}
+  ogImage={ogImage}
+  coverImage={coverImage}
+  ogType="article"
+  keywords={mergedKeywords}
+  robots={robots}
+  article={{
+    publishedTime: formatIsoDate(pubDate),
+    modifiedTime: updatedDate ? formatIsoDate(updatedDate) : undefined,
+    author,
+    section: categoryLabel(category),
+    tags,
+  }}
+  jsonLd={jsonLd}
+>
+  <article class="mx-auto max-w-3xl px-6 py-10">
+    <header class="mb-8 space-y-4 border-b border-white/10 pb-8">
+      <PostMeta
+        title={title}
+        description={description}
+        category={category}
+        pubDate={pubDate}
+        updatedDate={updatedDate}
+        author={author}
+        readingTimeMinutes={readingTime}
+        tags={tags}
+        guestAuthor={guestAuthor}
+      />
+    </header>
+
+    {resolvedCover && (
+      <PostCover src={resolvedCover} alt={coverAlt} caption={coverCaption} />
+    )}
+
+    {syndicatedFrom && <SyndicationBanner originalUrl={syndicatedFrom} />}
+
+    {videoUrl && (
+      <div class="mb-8">
+        <VideoEmbed url={videoUrl} title={title} />
+      </div>
+    )}
+
+    <div class="prose-blog">
+      <slot />
+    </div>
+
+    {(guestAuthor || authorTitle) && (
+      <footer class="mt-12 border-t border-white/10 pt-8">
+        <AuthorCard author={author} authorTitle={authorTitle} guestAuthor={guestAuthor} />
+      </footer>
+    )}
+  </article>
+</BaseLayout>

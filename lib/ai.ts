@@ -1,7 +1,14 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { streamText, type LanguageModel } from "ai";
+import {
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  streamText,
+  type LanguageModel,
+  type ModelMessage,
+  type UIMessage,
+} from "ai";
 
 export type AIProvider = "openai" | "anthropic" | "google";
 
@@ -98,6 +105,116 @@ export async function withModelFallback<T>(
   }
 
   throw lastError;
+}
+
+export function getChatModelsForProvider(
+  provider: AIProvider,
+  apiKey?: string
+): { model: LanguageModel; modelId: string }[] {
+  if (provider === "google") {
+    const google = createGoogleGenerativeAI({ apiKey: apiKey || process.env.GOOGLE_AI_API_KEY });
+    return GOOGLE_MODEL_IDS.map((modelId) => ({ model: google(modelId), modelId }));
+  }
+  if (provider === "anthropic") {
+    return [{ model: getModel("anthropic", apiKey), modelId: "claude-3-5-sonnet-20241022" }];
+  }
+  return [{ model: getModel("openai", apiKey), modelId: "gpt-4o" }];
+}
+
+export async function validateChatCapability(
+  provider: AIProvider,
+  apiKey: string
+): Promise<{ ok: true; modelId: string } | { ok: false; error: string }> {
+  const models = getChatModelsForProvider(provider, apiKey);
+  let lastError: unknown;
+
+  for (const { model, modelId } of models) {
+    try {
+      const result = streamText({
+        model,
+        system: "You are a connectivity test assistant.",
+        messages: [{ role: "user", content: "Reply with exactly: OK" }],
+        maxOutputTokens: 16,
+        maxRetries: 0,
+      });
+      const chunks: string[] = [];
+      for await (const chunk of result.textStream) {
+        chunks.push(chunk);
+      }
+      if (!chunks.join("").trim()) {
+        throw new Error("Chat returned an empty response.");
+      }
+      return { ok: true, modelId };
+    } catch (err) {
+      lastError = err;
+      if (provider !== "google" || !isGoogleModelFallbackError(err)) {
+        return { ok: false, error: formatAIError(err) };
+      }
+    }
+  }
+
+  return {
+    ok: false,
+    error: formatAIError(
+      lastError ?? new Error("No chat-capable model is available for this key right now.")
+    ),
+  };
+}
+
+export function createChatStreamResponseWithFallback(params: {
+  provider: AIProvider;
+  apiKey?: string;
+  system: string;
+  messages: ModelMessage[];
+  originalMessages?: UIMessage[];
+  maxOutputTokens?: number;
+  onUsage?: (inputTokens: number, outputTokens: number, modelId: string) => Promise<void>;
+}) {
+  const models = getChatModelsForProvider(params.provider, params.apiKey);
+
+  const stream = createUIMessageStream({
+    originalMessages: params.originalMessages,
+    execute: async ({ writer }) => {
+      let lastError: unknown;
+
+      for (const { model, modelId } of models) {
+        try {
+          const result = streamText({
+            model,
+            system: params.system,
+            messages: params.messages,
+            maxOutputTokens: params.maxOutputTokens ?? 600,
+            maxRetries: 0,
+          });
+
+          for await (const chunk of result.toUIMessageStream()) {
+            writer.write(chunk);
+          }
+
+          if (params.onUsage) {
+            const usage = await result.usage;
+            await params.onUsage(
+              usage?.inputTokens ?? 0,
+              usage?.outputTokens ?? 0,
+              modelId
+            );
+          }
+
+          return;
+        } catch (err) {
+          lastError = err;
+          if (params.provider !== "google" || !isGoogleModelFallbackError(err)) {
+            throw err;
+          }
+        }
+      }
+
+      throw lastError;
+    },
+    onError: (error) => formatAIError(error),
+  });
+
+  return createUIMessageStreamResponse({ stream });
 }
 
 export function buildCVPrompt(params: GenerateParams): string {

@@ -155,8 +155,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (allResults.length === 0) {
+      const jinaConfigured = Boolean(process.env.JINA_API_KEY?.trim());
       return NextResponse.json(
-        { error: "No live openings found. Try again later or search manually." },
+        {
+          error: jinaConfigured
+            ? "No live openings found for these queries. Try again later or search manually."
+            : "Live job search is not configured (missing JINA_API_KEY). Contact the site admin.",
+        },
         { status: 502 }
       );
     }

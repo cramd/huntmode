@@ -16,17 +16,23 @@ import {
   Zap,
   ChevronLeft,
   ChevronRight,
+  Newspaper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HuntModeBrand } from "@/components/HuntModeBrand";
 
-const navItems = [
+const navItems: {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+}[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/applications", label: "Applications", icon: Briefcase },
   { href: "/goals", label: "Goals", icon: Target },
   { href: "/resume", label: "My Resume", icon: FileText },
+  { href: "/blog/", label: "Blog", icon: Newspaper },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -118,7 +124,9 @@ export default function Sidebar({
       {/* Nav Section */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + "/");
+          const active =
+            href !== "/blog/" &&
+            (pathname === href || pathname.startsWith(href + "/"));
           return (
             <Link
               key={href}

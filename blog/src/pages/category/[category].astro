@@ -1,0 +1,42 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import PostCard from "../../components/PostCard.astro";
+import { BLOG_CATEGORIES, CATEGORY_LABELS, type BlogCategory } from "../../content.config";
+import { isPublished } from "../../lib/blog";
+
+export async function getStaticPaths() {
+  return BLOG_CATEGORIES.map((category) => ({ params: { category } }));
+}
+
+const { category } = Astro.params as { category: BlogCategory };
+const posts = (await getCollection("blog"))
+  .filter((post) => post.data.category === category && isPublished(post.data.draft))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+---
+
+<BaseLayout
+  title={`${CATEGORY_LABELS[category]} | HuntMode Blog`}
+  description={`${CATEGORY_LABELS[category]} from the HuntMode blog.`}
+  canonicalPath={`/blog/category/${category}/`}
+>
+  <section class="mx-auto max-w-5xl px-6 py-12">
+    <a href="/blog/" class="mb-6 inline-flex text-sm font-semibold text-indigo-300 hover:text-indigo-200">
+      ← All posts
+    </a>
+    <h1 class="mb-2 text-3xl font-bold text-white">{CATEGORY_LABELS[category]}</h1>
+    <p class="mb-8 text-slate-400">
+      {posts.length} {posts.length === 1 ? "post" : "posts"} in this section.
+    </p>
+    <div class="grid gap-4 md:grid-cols-2">
+      {posts.map((post) => (
+        <PostCard post={post} />
+      ))}
+    </div>
+    {posts.length === 0 && (
+      <p class="rounded-2xl border border-white/10 bg-slate-900/40 p-8 text-center text-slate-500">
+        No posts in this category yet.
+      </p>
+    )}
+  </section>
+</BaseLayout>

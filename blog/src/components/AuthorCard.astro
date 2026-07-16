@@ -1,0 +1,17 @@
+---
+interface Props {
+  author: string;
+  authorTitle?: string;
+  guestAuthor: boolean;
+}
+
+const { author, authorTitle, guestAuthor } = Astro.props;
+---
+
+<div class="rounded-2xl border border-white/10 bg-slate-900/60 p-5">
+  <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+    {guestAuthor ? "Guest author" : "Written by"}
+  </p>
+  <p class="mt-1 text-lg font-bold text-white">{author}</p>
+  {authorTitle && <p class="mt-1 text-sm text-slate-400">{authorTitle}</p>}
+</div>

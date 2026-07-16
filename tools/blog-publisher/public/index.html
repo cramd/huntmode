@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HuntMode Blog Publisher</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0c0f12;
+      --bg-elevated: #141a20;
+      --border: #243038;
+      --text: #e8edf2;
+      --muted: #8a9aa8;
+      --accent: #3d9a6f;
+      --accent-dim: #2a6b4d;
+      --error: #e85d5d;
+      --warn: #d4a24a;
+      --radius: 6px;
+      --font: "DM Sans", system-ui, sans-serif;
+      --display: "Instrument Serif", Georgia, serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(61, 154, 111, 0.12), transparent),
+        linear-gradient(180deg, #0c0f12 0%, #0a0d10 100%);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    .wrap {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+
+    header {
+      margin-bottom: 2rem;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .brand {
+      font-family: var(--display);
+      font-size: 1.75rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .brand span { color: var(--accent); }
+
+    .subtitle {
+      margin-top: 0.35rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .field {
+      margin-bottom: 1.25rem;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .field:nth-child(2) { animation-delay: 0.05s; }
+    .field:nth-child(3) { animation-delay: 0.1s; }
+    .field:nth-child(4) { animation-delay: 0.15s; }
+
+    label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+    }
+
+    input[type="text"],
+    textarea {
+      width: 100%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 0.85rem;
+      padding: 0.65rem 0.75rem;
+      transition: border-color 0.15s;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    textarea {
+      min-height: 320px;
+      resize: vertical;
+      line-height: 1.55;
+    }
+
+    .hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.35rem;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      cursor: pointer;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 400;
+    }
+
+    input[type="checkbox"] {
+      accent-color: var(--accent);
+      width: 1rem;
+      height: 1rem;
+    }
+
+    .file-list {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .file-list li {
+      list-style: none;
+      padding: 0.2rem 0;
+      font-family: ui-monospace, monospace;
+    }
+
+    .file-list code { color: var(--accent); }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      animation: fadeUp 0.5s ease 0.2s both;
+    }
+
+    button {
+      font-family: var(--font);
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.65rem 1.25rem;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s, transform 0.1s;
+    }
+
+    button:active:not(:disabled) { transform: scale(0.98); }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .btn-validate {
+      background: var(--bg-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-validate:hover:not(:disabled) {
+      border-color: var(--muted);
+    }
+
+    .btn-publish {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-publish:hover:not(:disabled) {
+      background: var(--accent-dim);
+    }
+
+    .panel {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      animation: fadeUp 0.35s ease both;
+    }
+
+    .panel h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.6rem;
+    }
+
+    .issue {
+      font-size: 0.85rem;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .issue:last-child { border-bottom: none; }
+
+    .issue.error { color: var(--error); }
+    .issue.warn { color: var(--warn); }
+
+    .issue strong {
+      font-weight: 600;
+      margin-right: 0.35rem;
+    }
+
+    .log {
+      font-family: ui-monospace, monospace;
+      font-size: 0.78rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 360px;
+      overflow-y: auto;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .status-ok {
+      color: var(--accent);
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .hidden { display: none; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">Hunt<span>Mode</span> Blog Publisher</div>
+      <p class="subtitle">Validate markdown, upload images, deploy to huntmode.ca/blog</p>
+    </header>
+
+    <form id="form">
+      <div class="field">
+        <label for="slug">Slug</label>
+        <input type="text" id="slug" name="slug" placeholder="july-hunt" autocomplete="off" spellcheck="false" />
+        <p class="hint">Kebab-case filename → blog/src/content/blog/{slug}.md</p>
+      </div>
+
+      <div class="field">
+        <label for="markdown">Markdown (with frontmatter)</label>
+        <textarea id="markdown" name="markdown" placeholder="---&#10;title: ...&#10;---&#10;&#10;Your post body..."></textarea>
+      </div>
+
+      <div class="field">
+        <label for="images">Images</label>
+        <input type="file" id="images" name="images" accept="image/*" multiple />
+        <p class="hint">Referenced as /blog/images/{filename} in coverImage or inline markdown</p>
+        <ul class="file-list" id="file-list"></ul>
+      </div>
+
+      <div class="field">
+        <label class="checkbox-label">
+          <input type="checkbox" id="overwrite" />
+          Allow overwrite if post already exists
+        </label>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn-validate" id="validate-btn">Validate</button>
+        <button type="button" class="btn-publish" id="publish-btn" disabled>Publish</button>
+      </div>
+    </form>
+
+    <div id="validation-panel" class="panel hidden"></div>
+    <div id="log-panel" class="panel hidden">
+      <h3>Deploy log</h3>
+      <pre class="log" id="log-output"></pre>
+    </div>
+  </div>
+
+  <script>
+    const slugEl = document.getElementById("slug");
+    const markdownEl = document.getElementById("markdown");
+    const imagesEl = document.getElementById("images");
+    const overwriteEl = document.getElementById("overwrite");
+    const validateBtn = document.getElementById("validate-btn");
+    const publishBtn = document.getElementById("publish-btn");
+    const validationPanel = document.getElementById("validation-panel");
+    const logPanel = document.getElementById("log-panel");
+    const logOutput = document.getElementById("log-output");
+    const fileList = document.getElementById("file-list");
+
+    let lastValidationOk = false;
+
+    function getUploadedNames() {
+      return Array.from(imagesEl.files || []).map((f) => f.name);
+    }
+
+    function renderFileList() {
+      const files = Array.from(imagesEl.files || []);
+      if (files.length === 0) {
+        fileList.innerHTML = "";
+        return;
+      }
+      fileList.innerHTML = files
+        .map((f) => `<li><code>/blog/images/${f.name}</code></li>`)
+        .join("");
+    }
+
+    imagesEl.addEventListener("change", () => {
+      renderFileList();
+      lastValidationOk = false;
+      publishBtn.disabled = true;
+    });
+
+    function renderValidation(result) {
+      validationPanel.classList.remove("hidden");
+      const parts = [];
+
+      if (result.ok) {
+        parts.push('<p class="status-ok">✓ Validation passed — ready to publish</p>');
+        if (result.data?.urlPath) {
+          parts.push(`<p class="hint">Will publish to <code>${result.data.urlPath}</code></p>`);
+        }
+      } else {
+        parts.push('<p class="status-ok" style="color:var(--error)">✗ Fix errors before publishing</p>');
+      }
+
+      for (const e of result.errors || []) {
+        parts.push(`<div class="issue error"><strong>${e.field}:</strong> ${escapeHtml(e.message)}</div>`);
+      }
+      for (const w of result.warnings || []) {
+        parts.push(`<div class="issue warn"><strong>${w.field}:</strong> ${escapeHtml(w.message)}</div>`);
+      }
+
+      validationPanel.innerHTML = parts.join("");
+      lastValidationOk = result.ok;
+      publishBtn.disabled = !result.ok;
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    async function validate() {
+      validateBtn.disabled = true;
+      validateBtn.textContent = "Validating…";
+      try {
+        const res = await fetch("/api/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            slug: slugEl.value.trim(),
+            markdown: markdownEl.value,
+            uploadedImageNames: getUploadedNames(),
+            allowOverwrite: overwriteEl.checked,
+          }),
+        });
+        const data = await res.json();
+        renderValidation(data);
+      } catch (err) {
+        renderValidation({
+          ok: false,
+          errors: [{ field: "network", message: err.message }],
+          warnings: [],
+        });
+      } finally {
+        validateBtn.disabled = false;
+        validateBtn.textContent = "Validate";
+      }
+    }
+
+    async function publish() {
+      if (!lastValidationOk) return;
+      if (!confirm("Publish this post and deploy to huntmode.ca/blog?")) return;
+
+      publishBtn.disabled = true;
+      validateBtn.disabled = true;
+      logPanel.classList.remove("hidden");
+      logOutput.textContent = "Starting publish…\n";
+
+      const formData = new FormData();
+      formData.append("slug", slugEl.value.trim());
+      formData.append("markdown", markdownEl.value);
+      formData.append("allowOverwrite", overwriteEl.checked ? "true" : "false");
+      for (const file of imagesEl.files || []) {
+        formData.append("images", file);
+      }
+
+      try {
+        const res = await fetch("/api/publish", { method: "POST", body: formData });
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          logOutput.textContent += decoder.decode(value, { stream: true });
+          logOutput.scrollTop = logOutput.scrollHeight;
+        }
+      } catch (err) {
+        logOutput.textContent += `\n❌ ${err.message}`;
+      } finally {
+        publishBtn.disabled = !lastValidationOk;
+        validateBtn.disabled = false;
+      }
+    }
+
+    validateBtn.addEventListener("click", validate);
+    publishBtn.addEventListener("click", publish);
+
+    [slugEl, markdownEl].forEach((el) => {
+      el.addEventListener("input", () => {
+        lastValidationOk = false;
+        publishBtn.disabled = true;
+      });
+    });
+  </script>
+</body>
+</html>

@@ -867,57 +867,131 @@ export default function ApplicationDetailPage() {
 
       {/* Status updater */}
       <Card className="bg-slate-900/40 border-white/5 shadow-md">
-        <CardContent className="p-4 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400 mr-2">Update Stage:</span>
-          {(Object.keys(STATUS_CONFIG) as ApplicationStatus[]).map((s) => {
-            const c = STATUS_CONFIG[s];
-            return (
-              <button
-                key={s}
-                onClick={() => handleStatusChange(s)}
-                className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${
-                  app.status === s
-                    ? `border-current bg-current/15 ${c.color} shadow-sm scale-105`
-                    : `border-transparent bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white`
-                }`}
-              >
-                {c.label}
-              </button>
-            );
-          })}
+        <CardContent className="p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                Application stage
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Tap a stage to move this application forward.
+              </p>
+            </div>
+            <span className={`inline-flex items-center gap-1.5 rounded-lg border border-current/25 bg-current/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${cfg.color}`}>
+              <CheckCircle2 className="w-3 h-3" />
+              Current: {cfg.label}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Update application stage">
+            {(Object.keys(STATUS_CONFIG) as ApplicationStatus[]).map((s) => {
+              const c = STATUS_CONFIG[s];
+              const isActive = app.status === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => handleStatusChange(s)}
+                  aria-pressed={isActive}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition-all cursor-pointer",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50",
+                    isActive
+                      ? `border-current/40 bg-current/15 ${c.color} shadow-[0_0_0_1px_rgba(255,255,255,0.06)]`
+                      : "border-white/10 bg-slate-950/50 text-slate-400 hover:border-white/20 hover:bg-white/5 hover:text-white"
+                  )}
+                >
+                  {isActive && <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />}
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
         </CardContent>
-      </Card>      {/* Main content */}
+      </Card>
+
+      {/* Main content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="mb-3 bg-slate-900/40 border border-white/5 p-1 rounded-xl overflow-x-auto scrollbar-none -mx-1 px-1">
-          <TabsList className="bg-transparent border-0 gap-1.5 p-0 w-max min-w-full">
-            <TabsTrigger value="cv" className="px-3 sm:px-4 py-2 text-xs font-bold shrink-0">
-              <span className="sm:hidden">CV</span>
-              <span className="hidden sm:inline">Tailored CV</span>
-            </TabsTrigger>
-            <TabsTrigger value="cl" className="px-3 sm:px-4 py-2 text-xs font-bold shrink-0">
-              <span className="sm:hidden">Letter</span>
-              <span className="hidden sm:inline">Cover Letter</span>
-            </TabsTrigger>
-            <TabsTrigger value="jd" className="px-3 sm:px-4 py-2 text-xs font-bold shrink-0">
-              <span className="sm:hidden">JD</span>
-              <span className="hidden sm:inline">Job Description</span>
-            </TabsTrigger>
-            <TabsTrigger value="interview" className="px-3 sm:px-4 py-2 text-xs font-bold shrink-0">
-              <span className="sm:hidden">Prep</span>
-              <span className="hidden sm:inline">Interview Prep</span>
-            </TabsTrigger>
-            <TabsTrigger value="fit" className="px-3 sm:px-4 py-2 text-xs font-bold flex items-center gap-1.5 shrink-0">
-              <BarChart2 className="w-3 h-3" />
-              Fit
-              {app.fitScore && (
-                <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-black ${
-                  app.fitScore.overall >= 75 ? "bg-emerald-500/20 text-emerald-300" :
-                  app.fitScore.overall >= 50 ? "bg-amber-500/20 text-amber-300" :
-                  "bg-red-500/20 text-red-300"
-                }`}>{app.fitScore.overall}%</span>
-              )}
-            </TabsTrigger>
-          </TabsList>
+        <div className="mb-4 space-y-2">
+          <div className="flex flex-wrap items-end justify-between gap-2 px-0.5">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                Workspace
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Open a section to edit docs, prep, or fit analysis.
+              </p>
+            </div>
+          </div>
+          <div className="bg-slate-900/50 border border-white/10 p-1.5 rounded-2xl overflow-x-auto scrollbar-none">
+            <TabsList className="bg-transparent border-0 gap-1.5 p-0 w-max min-w-full h-auto">
+              <TabsTrigger
+                value="cv"
+                className={cn(
+                  "group shrink-0 h-auto min-h-11 gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-bold cursor-pointer",
+                  "border-transparent text-slate-400 hover:border-white/10 hover:bg-white/5 hover:text-white",
+                  "data-active:border-indigo-500/40 data-active:bg-indigo-500/15 data-active:text-indigo-100 data-active:shadow-sm"
+                )}
+              >
+                <FileText className="w-3.5 h-3.5 opacity-70 group-data-active:opacity-100" />
+                <span className="sm:hidden">CV</span>
+                <span className="hidden sm:inline">Tailored CV</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="cl"
+                className={cn(
+                  "group shrink-0 h-auto min-h-11 gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-bold cursor-pointer",
+                  "border-transparent text-slate-400 hover:border-white/10 hover:bg-white/5 hover:text-white",
+                  "data-active:border-indigo-500/40 data-active:bg-indigo-500/15 data-active:text-indigo-100 data-active:shadow-sm"
+                )}
+              >
+                <PenLine className="w-3.5 h-3.5 opacity-70 group-data-active:opacity-100" />
+                <span className="sm:hidden">Letter</span>
+                <span className="hidden sm:inline">Cover Letter</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="jd"
+                className={cn(
+                  "group shrink-0 h-auto min-h-11 gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-bold cursor-pointer",
+                  "border-transparent text-slate-400 hover:border-white/10 hover:bg-white/5 hover:text-white",
+                  "data-active:border-indigo-500/40 data-active:bg-indigo-500/15 data-active:text-indigo-100 data-active:shadow-sm"
+                )}
+              >
+                <Search className="w-3.5 h-3.5 opacity-70 group-data-active:opacity-100" />
+                <span className="sm:hidden">JD</span>
+                <span className="hidden sm:inline">Job Description</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="interview"
+                className={cn(
+                  "group shrink-0 h-auto min-h-11 gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-bold cursor-pointer",
+                  "border-transparent text-slate-400 hover:border-white/10 hover:bg-white/5 hover:text-white",
+                  "data-active:border-indigo-500/40 data-active:bg-indigo-500/15 data-active:text-indigo-100 data-active:shadow-sm"
+                )}
+              >
+                <MessageSquareText className="w-3.5 h-3.5 opacity-70 group-data-active:opacity-100" />
+                <span className="sm:hidden">Prep</span>
+                <span className="hidden sm:inline">Interview Prep</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="fit"
+                className={cn(
+                  "group shrink-0 h-auto min-h-11 gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-bold cursor-pointer",
+                  "border-transparent text-slate-400 hover:border-white/10 hover:bg-white/5 hover:text-white",
+                  "data-active:border-indigo-500/40 data-active:bg-indigo-500/15 data-active:text-indigo-100 data-active:shadow-sm"
+                )}
+              >
+                <BarChart2 className="w-3.5 h-3.5 opacity-70 group-data-active:opacity-100" />
+                Fit
+                {app.fitScore && (
+                  <span className={`ml-0.5 px-1.5 py-0.5 rounded text-[10px] font-black ${
+                    app.fitScore.overall >= 75 ? "bg-emerald-500/20 text-emerald-300" :
+                    app.fitScore.overall >= 50 ? "bg-amber-500/20 text-amber-300" :
+                    "bg-red-500/20 text-red-300"
+                  }`}>{app.fitScore.overall}%</span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </div>
         </div>
 
         <TabsContent value="cv">
