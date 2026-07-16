@@ -22,13 +22,6 @@ import { auth } from "@/lib/firebase";
 import { saveUserProfile, getUserProfile } from "@/lib/db";
 import { AnalyticsEvents, captureEvent, identifyUser, resetUser } from "@/lib/analytics";
 
-function isMobile(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(
-    navigator.userAgent
-  );
-}
-
 function serializeError(err: any): string {
   if (!err) return "null";
   try {
@@ -408,33 +401,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logDiagnostic(`Google Identity Services flow encountered an error: ${String(gisErr)}. Falling back to Firebase Auth...`);
     }
 
-    // FALLBACK: Original Firebase Auth Flow (Popup / Redirect)
-    const provider = new GoogleAuthProvider();
+    // FALLBACK: Firebase Auth popup-first on ALL platforms (including mobile).
+    // Mobile Chrome/Safari third-party cookie blocking silently breaks
+    // signInWithRedirect — Google returns to the landing page with no session.
+    // Redirect only when the popup is explicitly blocked.
+    await signInWithFirebasePopup(new GoogleAuthProvider(), "Google");
+  };
 
-    if (isMobile()) {
-      logDiagnostic("Mobile browser detected. Initiating fallback signInWithRedirect...");
-      try {
-        await signInWithRedirect(auth, provider);
-      } catch (err: unknown) {
-        const code = (err as { code?: string }).code ?? "";
-        logDiagnostic(`signInWithRedirect fallback failed. Code: ${code}`);
-        setAuthError(`Sign-in failed: ${code || "redirect error"}`);
-      }
-      return;
-    }
-
+  const signInWithFirebasePopup = async (
+    provider: GoogleAuthProvider | GithubAuthProvider,
+    providerLabel: "Google" | "GitHub"
+  ) => {
     try {
-      logDiagnostic("Initiating fallback signInWithPopup...");
+      logDiagnostic(`Initiating ${providerLabel} signInWithPopup (all platforms)...`);
       await signInWithPopup(auth, provider);
-      logDiagnostic("signInWithPopup completed successfully!");
+      logDiagnostic(`${providerLabel} signInWithPopup completed successfully!`);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
       const message = (err as { message?: string }).message ?? "Unknown error";
-      logDiagnostic(`signInWithPopup failed. Code: ${code}, Message: ${message}`);
-      logDiagnostic(`Detailed signInWithPopup error: ${serializeError(err)}`);
+      logDiagnostic(`${providerLabel} signInWithPopup failed. Code: ${code}, Message: ${message}`);
+      logDiagnostic(`Detailed ${providerLabel} signInWithPopup error: ${serializeError(err)}`);
 
-      if (code === "auth/popup-blocked" || code === "auth/cancelled-popup-request" || code === "auth/popup-closed-by-user" || code === "auth/internal-error") {
-        logDiagnostic(`Attempting fallback to signInWithRedirect due to error code: ${code}`);
+      if (code === "auth/popup-closed-by-user") {
+        // User cancelled — do not fall back to redirect (also broken on mobile).
+        logDiagnostic(`${providerLabel} popup closed by user; not falling back to redirect.`);
+        return;
+      }
+
+      if (code === "auth/popup-blocked" || code === "auth/cancelled-popup-request") {
+        logDiagnostic(`Popup blocked; attempting signInWithRedirect due to: ${code}`);
         try {
           await signInWithRedirect(auth, provider);
         } catch (redirectErr: unknown) {
@@ -444,7 +439,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setAuthError(`Sign-in failed: ${redirectCode || "redirect error"}`);
         }
       } else if (code === "auth/configuration-not-found") {
-        setAuthError("Google Sign-In is not enabled. Enable it in Firebase Console → Authentication → Sign-in method → Google.");
+        setAuthError(
+          `${providerLabel} Sign-In is not enabled. Enable it in Firebase Console → Authentication → Sign-in method → ${providerLabel}.`
+        );
       } else if (code === "auth/unauthorized-domain") {
         setAuthError(
           `This domain is not authorized for sign-in. Add "${window.location.hostname}" to Firebase Console → Authentication → Settings → Authorized domains.`
@@ -462,51 +459,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGithub = async () => {
     logDiagnostic("signInWithGithub action triggered.");
     setAuthError(null);
-
-    const provider = new GithubAuthProvider();
-
-    if (isMobile()) {
-      logDiagnostic("Mobile browser detected. Initiating fallback signInWithRedirect...");
-      try {
-        await signInWithRedirect(auth, provider);
-      } catch (err: unknown) {
-        const code = (err as { code?: string }).code ?? "";
-        logDiagnostic(`signInWithRedirect fallback failed. Code: ${code}`);
-        setAuthError(`Sign-in failed: ${code || "redirect error"}`);
-      }
-      return;
-    }
-
-    try {
-      logDiagnostic("Initiating GitHub signInWithPopup...");
-      await signInWithPopup(auth, provider);
-      logDiagnostic("signInWithPopup completed successfully!");
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code ?? "";
-      const message = (err as { message?: string }).message ?? "Unknown error";
-      logDiagnostic(`signInWithPopup failed. Code: ${code}, Message: ${message}`);
-      logDiagnostic(`Detailed signInWithPopup error: ${serializeError(err)}`);
-
-      if (code === "auth/popup-blocked" || code === "auth/cancelled-popup-request" || code === "auth/popup-closed-by-user" || code === "auth/internal-error") {
-        logDiagnostic(`Attempting fallback to signInWithRedirect due to error code: ${code}`);
-        try {
-          await signInWithRedirect(auth, provider);
-        } catch (redirectErr: unknown) {
-          const redirectCode = (redirectErr as { code?: string }).code ?? "";
-          logDiagnostic(`signInWithRedirect fallback failed. Code: ${redirectCode}`);
-          logDiagnostic(`Detailed signInWithRedirect fallback error: ${serializeError(redirectErr)}`);
-          setAuthError(`Sign-in failed: ${redirectCode || "redirect error"}`);
-        }
-      } else if (code === "auth/configuration-not-found") {
-        setAuthError("GitHub Sign-In is not enabled. Enable it in Firebase Console → Authentication → Sign-in method → GitHub.");
-      } else if (code === "auth/unauthorized-domain") {
-        setAuthError(
-          `This domain is not authorized for sign-in. Add "${window.location.hostname}" to Firebase Console → Authentication → Settings → Authorized domains.`
-        );
-      } else {
-        setAuthError(`Sign-in failed: ${code || message}`);
-      }
-    }
+    await signInWithFirebasePopup(new GithubAuthProvider(), "GitHub");
   };
 
   const logout = async () => {
