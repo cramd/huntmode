@@ -10,6 +10,7 @@ import {
   query,
   where,
   orderBy,
+  limit,
   Timestamp,
   serverTimestamp,
 } from "firebase/firestore";
@@ -21,6 +22,7 @@ import type {
   UserProfile,
   ActivityLog,
   ApplicationStatus,
+  UsageEvent,
 } from "./types";
 
 // --- Applications ---
@@ -201,6 +203,36 @@ export async function saveUserProfile(
   data: Partial<UserProfile>
 ): Promise<void> {
   await setDoc(doc(db, "users", uid, "profile", "data"), data, { merge: true });
+}
+
+export async function getRecentUsageEvents(uid: string, maxEvents = 20): Promise<UsageEvent[]> {
+  const q = query(
+    collection(db, "users", uid, "usageEvents"),
+    orderBy("createdAt", "desc"),
+    limit(maxEvents)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((eventDoc) => {
+    const data = eventDoc.data();
+    const createdAt =
+      data.createdAt instanceof Timestamp
+        ? data.createdAt.toDate().toISOString()
+        : typeof data.createdAt === "string"
+          ? data.createdAt
+          : new Date().toISOString();
+    return {
+      id: eventDoc.id,
+      createdAt,
+      feature: data.feature,
+      provider: data.provider,
+      modelId: data.modelId,
+      inputTokens: data.inputTokens ?? 0,
+      outputTokens: data.outputTokens ?? 0,
+      totalTokens: data.totalTokens ?? 0,
+      estimatedCostUsd: data.estimatedCostUsd ?? 0,
+      applicationId: data.applicationId,
+    } as UsageEvent;
+  });
 }
 
 // --- Activity Log ---

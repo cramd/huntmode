@@ -57,12 +57,16 @@ async function generateDraftSuggestions(
   prompt: string,
   uid: string
 ): Promise<OnboardingDraftSuggestion[]> {
-  const { text, usage } = await withModelFallback("google", process.env.GOOGLE_AI_API_KEY, (model) =>
+  const { result, modelId } = await withModelFallback("google", process.env.GOOGLE_AI_API_KEY, (model) =>
     generateText({ model, prompt, maxOutputTokens: 4000, maxRetries: 1 })
   );
+  const { text, usage } = result;
 
   if (usage) {
-    await trackTokenUsage(uid, "google", usage.inputTokens || 0, usage.outputTokens || 0);
+    await trackTokenUsage(uid, "google", usage.inputTokens || 0, usage.outputTokens || 0, {
+      feature: "onboarding-suggest-roles",
+      modelId,
+    });
   }
 
   return parseDraftsFromAiText(text);

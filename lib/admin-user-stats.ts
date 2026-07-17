@@ -11,6 +11,8 @@ export type AdminUserRow = {
   applicationCount: number;
   onboardingCompleted: boolean;
   lastActiveDate: string | null;
+  totalTokensUsed: number;
+  totalEstimatedCostUsd: number;
 };
 
 async function buildUserRow(doc: QueryDocumentSnapshot): Promise<AdminUserRow> {
@@ -31,6 +33,9 @@ async function buildUserRow(doc: QueryDocumentSnapshot): Promise<AdminUserRow> {
     onboardingCompleted: Boolean(profile?.onboardingCompletedAt),
     lastActiveDate:
       typeof profile?.lastActiveDate === "string" ? profile.lastActiveDate : null,
+    totalTokensUsed: typeof profile?.totalTokensUsed === "number" ? profile.totalTokensUsed : 0,
+    totalEstimatedCostUsd:
+      typeof profile?.totalEstimatedCostUsd === "number" ? profile.totalEstimatedCostUsd : 0,
   };
 }
 

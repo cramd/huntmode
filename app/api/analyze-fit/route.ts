@@ -4,6 +4,7 @@ import { buildFitScorePrompt, withModelFallback, formatAIError } from "@/lib/ai"
 import type { AIProvider } from "@/lib/ai";
 import { generateText } from "ai";
 import type { FitScore } from "@/lib/types";
+import { trackTokenUsage } from "@/lib/cost-tracker";
 
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
       company: company || "the company",
     });
 
-    const result = await withModelFallback(activeProvider, apiKey, (model) =>
+    const { result, modelId } = await withModelFallback(activeProvider, apiKey, (model) =>
       generateText({
         model,
         prompt,
@@ -73,6 +74,14 @@ export async function POST(req: NextRequest) {
         },
       })
     );
+
+    if (result.usage) {
+      await trackTokenUsage(uid, activeProvider, result.usage.inputTokens || 0, result.usage.outputTokens || 0, {
+        feature: "analyze-fit",
+        modelId,
+        applicationId,
+      });
+    }
 
     const cleaned = result.text
       .replace(/^```json\s*/i, "")

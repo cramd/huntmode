@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     });
 
     console.log(`[generate-prep] Prompt length: ${prompt.length}. Calling generateObject...`);
-    const result = await withModelFallback(activeProvider, apiKey, (fallbackModel) =>
+    const { result, modelId } = await withModelFallback(activeProvider, apiKey, (fallbackModel) =>
       generateObject({
         model: fallbackModel,
         prompt,
@@ -104,7 +104,10 @@ export async function POST(req: NextRequest) {
     );
 
     if (uid && result.usage) {
-      await trackTokenUsage(uid, activeProvider, result.usage.inputTokens || 0, result.usage.outputTokens || 0);
+      await trackTokenUsage(uid, activeProvider, result.usage.inputTokens || 0, result.usage.outputTokens || 0, {
+        feature: "generate-prep",
+        modelId,
+      });
     }
 
     console.log(`[generate-prep] Received valid object successfully`);

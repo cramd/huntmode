@@ -6,6 +6,8 @@ import {
   type AIProvider,
 } from "@/lib/ai";
 import { generateText } from "ai";
+import { adminAuth } from "@/lib/firebase-admin";
+import { trackTokenUsage } from "@/lib/cost-tracker";
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,11 +24,21 @@ export async function POST(req: NextRequest) {
     }
 
     const activeProvider = provider as AIProvider;
+    let uid = "";
+    const authHeader = req.headers.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      try {
+        const decoded = await adminAuth.verifyIdToken(authHeader.substring(7));
+        uid = decoded.uid || "";
+      } catch {
+        // Optional auth — validation still works without tracking
+      }
+    }
 
     // Document probe: use generateText (not a partial stream read).
     // Partial textStream reads can return done/empty without surfacing the real API error.
     try {
-      const docProbe = await withModelFallback(activeProvider, apiKey, (model) =>
+      const { result, modelId } = await withModelFallback(activeProvider, apiKey, (model) =>
         generateText({
           model,
           prompt:
@@ -42,9 +54,15 @@ export async function POST(req: NextRequest) {
             : {}),
         })
       );
-      const docText = (docProbe.text || "").trim();
+      const docText = (result.text || "").trim();
       if (!docText) {
         throw new Error("Document generation returned an empty response.");
+      }
+      if (uid && result.usage) {
+        await trackTokenUsage(uid, activeProvider, result.usage.inputTokens || 0, result.usage.outputTokens || 0, {
+          feature: "validate-key",
+          modelId,
+        });
       }
     } catch (docErr) {
       throw new Error(

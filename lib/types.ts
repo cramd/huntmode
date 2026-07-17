@@ -196,6 +196,37 @@ export interface Goal {
   createdAt: string;
 }
 
+export type AIProvider = "openai" | "anthropic" | "google";
+
+export type UsageFeature =
+  | "generate"
+  | "suggest"
+  | "parse-resume"
+  | "incorporate-fit"
+  | "generate-prep"
+  | "interview-chat"
+  | "interview-likely-questions"
+  | "interview-debrief"
+  | "find-similar"
+  | "onboarding-parse-resume"
+  | "onboarding-suggest-roles"
+  | "analyze-fit"
+  | "scrape-job"
+  | "validate-key";
+
+export interface UsageEvent {
+  id: string;
+  createdAt: string;
+  feature: UsageFeature;
+  provider: AIProvider;
+  modelId: string;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  estimatedCostUsd: number;
+  applicationId?: string;
+}
+
 export interface UserProfile {
   uid: string;
   name: string;

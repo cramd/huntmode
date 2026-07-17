@@ -104,9 +104,10 @@ export async function withModelFallback<T>(
   provider: AIProvider,
   apiKey: string | undefined,
   run: (model: LanguageModel) => T | Promise<T>
-): Promise<T> {
+): Promise<{ result: T; modelId: string }> {
   if (provider === "openai") {
-    return run(getModel(provider, apiKey));
+    const result = await run(getModel(provider, apiKey));
+    return { result, modelId: "gpt-4o" };
   }
 
   const candidates =
@@ -134,7 +135,8 @@ export async function withModelFallback<T>(
 
   for (const { model, modelId } of candidates) {
     try {
-      return await run(model);
+      const result = await run(model);
+      return { result, modelId };
     } catch (err) {
       lastError = err;
       if (!isModelFallbackError(err)) throw err;
@@ -442,7 +444,7 @@ export async function generateDocument(params: GenerateParams) {
     ? buildCVPrompt(params)
     : buildCoverLetterPrompt(params);
 
-  return withModelFallback(params.provider || "openai", params.apiKey, (model) =>
+  const { result } = await withModelFallback(params.provider || "openai", params.apiKey, (model) =>
     streamText({
       model,
       prompt,
@@ -453,6 +455,7 @@ export async function generateDocument(params: GenerateParams) {
         : {}),
     })
   );
+  return result;
 }
 
 export async function streamTextWithFallback(params: {
@@ -460,27 +463,27 @@ export async function streamTextWithFallback(params: {
   apiKey?: string;
   prompt: string;
   maxOutputTokens?: number;
-}): Promise<{ text: string; inputTokens: number; outputTokens: number }> {
+}): Promise<{ text: string; inputTokens: number; outputTokens: number; modelId: string }> {
   const provider = params.provider || "openai";
-  const models =
+  const modelEntries =
     provider === "google"
       ? GOOGLE_MODEL_IDS.map((modelId) => {
           const google = createGoogleGenerativeAI({
             apiKey: params.apiKey || process.env.GOOGLE_AI_API_KEY,
           });
-          return google(modelId);
+          return { model: google(modelId), modelId };
         })
       : provider === "anthropic"
         ? ANTHROPIC_MODEL_IDS.map((modelId) => {
             const anthropic = createAnthropic({
               apiKey: params.apiKey || process.env.ANTHROPIC_API_KEY,
             });
-            return anthropic(modelId);
+            return { model: anthropic(modelId), modelId };
           })
-        : [getModel(provider, params.apiKey)];
+        : [{ model: getModel(provider, params.apiKey), modelId: "gpt-4o" }];
 
   let lastError: unknown;
-  for (const model of models) {
+  for (const { model, modelId } of modelEntries) {
     try {
       const result = streamText({
         model,
@@ -502,6 +505,7 @@ export async function streamTextWithFallback(params: {
         text,
         inputTokens: usage.inputTokens || 0,
         outputTokens: usage.outputTokens || 0,
+        modelId,
       };
     } catch (err) {
       lastError = err;

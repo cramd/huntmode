@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { UserProfile } from "@/lib/types";
+import { HUNT_SPEND_SIDEBAR_HINT, HUNT_SPEND_SIDEBAR_LABEL } from "@/lib/usage-labels";
 import {
   LayoutDashboard,
   Briefcase,
@@ -170,13 +171,17 @@ export default function Sidebar({
         </Link>
       </div>
 
-      {/* AI Cost Tracker */}
+      {/* Hunt spend (lifetime AI on HuntMode) */}
       <div className={cn("py-3 border-t border-sidebar-border/30", isCollapsed && !isMobile ? "px-0 text-center flex justify-center" : "px-4")}>
-        <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-3 py-2 rounded-xl text-xs font-bold border border-emerald-500/20 shadow-inner">
-          <Zap className="w-3.5 h-3.5" />
+        <div
+          className="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-3 py-2 rounded-xl text-xs font-bold border border-emerald-500/20 shadow-inner"
+          title={HUNT_SPEND_SIDEBAR_HINT}
+        >
+          <Zap className="w-3.5 h-3.5 shrink-0" />
           {(!isCollapsed || isMobile) && (
-            <span>
-              AI Cost: ${profile?.totalEstimatedCostUsd ? profile.totalEstimatedCostUsd.toFixed(4) : "0.0000"}
+            <span className="leading-tight">
+              {HUNT_SPEND_SIDEBAR_LABEL}: $
+              {profile?.totalEstimatedCostUsd ? profile.totalEstimatedCostUsd.toFixed(4) : "0.0000"}
             </span>
           )}
         </div>

@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { isAdminEmail } from "@/lib/is-admin";
 import type { AdminUserRow, SignupStats } from "@/lib/signup-stats";
 import type { AccessRequestStatus } from "@/lib/types";
+import { USAGE_FEATURE_LABELS } from "@/lib/usage-labels";
 
 function formatResetTime(iso: string) {
   return new Date(iso).toLocaleTimeString(undefined, {
@@ -93,6 +94,7 @@ function StatTile({
 
 function UserDirectoryTable({ users }: { users: AdminUserRow[] }) {
   const totalApps = users.reduce((sum, u) => sum + u.applicationCount, 0);
+  const totalCost = users.reduce((sum, u) => sum + u.totalEstimatedCostUsd, 0);
 
   return (
     <div className="space-y-3 pt-2 border-t border-white/5">
@@ -102,7 +104,7 @@ function UserDirectoryTable({ users }: { users: AdminUserRow[] }) {
         </p>
         <span className="text-[10px] text-slate-500">
           {users.length} account{users.length === 1 ? "" : "s"} · {totalApps} application
-          {totalApps === 1 ? "" : "s"} total
+          {totalApps === 1 ? "" : "s"} · ${totalCost.toFixed(2)} est. AI spend
         </span>
       </div>
 
@@ -110,13 +112,15 @@ function UserDirectoryTable({ users }: { users: AdminUserRow[] }) {
         <p className="text-sm text-slate-500 text-center py-4">No registered accounts yet.</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-white/5">
-          <table className="w-full min-w-[540px] text-left text-xs">
+          <table className="w-full min-w-[680px] text-left text-xs">
             <thead>
               <tr className="border-b border-white/5 bg-slate-950/60 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 <th className="px-3 py-2.5 font-bold">User</th>
                 <th className="px-3 py-2.5 font-bold">Status</th>
                 <th className="px-3 py-2.5 font-bold">Joined</th>
                 <th className="px-3 py-2.5 font-bold text-right">Apps</th>
+                <th className="px-3 py-2.5 font-bold text-right">Tokens</th>
+                <th className="px-3 py-2.5 font-bold text-right">Est. AI $</th>
                 <th className="px-3 py-2.5 font-bold text-center">Onboarded</th>
               </tr>
             </thead>
@@ -143,12 +147,76 @@ function UserDirectoryTable({ users }: { users: AdminUserRow[] }) {
                   <td className="px-3 py-2.5 text-right font-bold text-white tabular-nums">
                     {row.applicationCount}
                   </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-300">
+                    {row.totalTokensUsed.toLocaleString()}
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-amber-200">
+                    ${row.totalEstimatedCostUsd.toFixed(4)}
+                  </td>
                   <td className="px-3 py-2.5 text-center">
                     {row.onboardingCompleted ? (
                       <Check className="w-4 h-4 text-emerald-400 inline-block" aria-label="Yes" />
                     ) : (
                       <X className="w-4 h-4 text-slate-600 inline-block" aria-label="No" />
                     )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function UsageRollupTable({ stats }: { stats: SignupStats["usageSummary"] }) {
+  return (
+    <div className="space-y-3 pt-2 border-t border-white/5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+          AI usage · last {stats.days} days
+        </p>
+        <span className="text-[10px] text-slate-500">
+          {stats.totalEvents} events · {stats.totalTokens.toLocaleString()} tokens · $
+          {stats.estimatedCostUsd.toFixed(2)} est.
+        </span>
+      </div>
+
+      {stats.byFeature.length === 0 ? (
+        <p className="text-sm text-slate-500 text-center py-4">
+          No usage events yet in this window.
+        </p>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-white/5">
+          <table className="w-full min-w-[520px] text-left text-xs">
+            <thead>
+              <tr className="border-b border-white/5 bg-slate-950/60 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                <th className="px-3 py-2.5 font-bold">Feature</th>
+                <th className="px-3 py-2.5 font-bold">Provider</th>
+                <th className="px-3 py-2.5 font-bold text-right">Calls</th>
+                <th className="px-3 py-2.5 font-bold text-right">Tokens</th>
+                <th className="px-3 py-2.5 font-bold text-right">Est. cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stats.byFeature.map((row) => (
+                <tr
+                  key={`${row.feature}-${row.provider}`}
+                  className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
+                >
+                  <td className="px-3 py-2.5 font-semibold text-slate-200">
+                    {USAGE_FEATURE_LABELS[row.feature] ?? row.feature}
+                  </td>
+                  <td className="px-3 py-2.5 text-slate-400">{row.provider}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-300">
+                    {row.eventCount}
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-300">
+                    {row.totalTokens.toLocaleString()}
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-amber-200">
+                    ${row.estimatedCostUsd.toFixed(4)}
                   </td>
                 </tr>
               ))}
@@ -298,6 +366,8 @@ export function AdminSignupStats() {
                 </span>
               )}
             </div>
+
+            <UsageRollupTable stats={stats.usageSummary} />
 
             <UserDirectoryTable users={stats.users ?? []} />
           </>

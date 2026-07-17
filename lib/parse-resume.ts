@@ -123,17 +123,18 @@ export async function structureResumeFromText(input: {
   provider?: AIProvider;
   apiKey?: string;
   includeHints?: boolean;
-  onUsage?: (inputTokens: number, outputTokens: number) => Promise<void>;
+  onUsage?: (inputTokens: number, outputTokens: number, modelId: string) => Promise<void>;
 }): Promise<{ sections: ParsedResumeSections; hints?: ParseResumeHints }> {
   const provider = input.provider ?? "openai";
   const prompt = buildStructurePrompt(input.rawText, input.includeHints ?? false);
 
-  const { text, usage } = await withModelFallback(provider, input.apiKey, (model) =>
+  const { result, modelId } = await withModelFallback(provider, input.apiKey, (model) =>
     generateText({ model, prompt, maxOutputTokens: 4500, maxRetries: 1 })
   );
+  const { text, usage } = result;
 
   if (input.onUsage && usage) {
-    await input.onUsage(usage.inputTokens || 0, usage.outputTokens || 0);
+    await input.onUsage(usage.inputTokens || 0, usage.outputTokens || 0, modelId);
   }
 
   const cleaned = text

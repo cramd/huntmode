@@ -24,9 +24,25 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Each user may only read/write their own data tree.
-    match /users/{uid}/{document=**} {
+    // Each user may only read/write their own data tree (except server-owned usage ledger).
+    match /users/{uid}/profile/{docId} {
       allow read, write: if request.auth != null && request.auth.uid == uid && isApproved(uid);
+    }
+    match /users/{uid}/applications/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid && isApproved(uid);
+    }
+    match /users/{uid}/masterResumes/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid && isApproved(uid);
+    }
+    match /users/{uid}/goals/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid && isApproved(uid);
+    }
+    match /users/{uid}/activity/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid && isApproved(uid);
+    }
+    match /users/{uid}/usageEvents/{eventId} {
+      allow read: if request.auth != null && request.auth.uid == uid && isApproved(uid);
+      allow write: if false;
     }
 
     // System docs (signup rate limit, etc.) — never readable from clients.

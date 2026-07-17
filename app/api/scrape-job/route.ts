@@ -3,6 +3,7 @@ import { adminAuth } from "@/lib/firebase-admin";
 import { withModelFallback, AIProvider } from "@/lib/ai";
 import { generateObject } from "ai";
 import { z } from "zod";
+import { trackTokenUsage } from "@/lib/cost-tracker";
 
 type FetchSource = "greenhouse" | "lever" | "ashby" | "workday" | "direct" | "jina";
 
@@ -38,11 +39,13 @@ export async function POST(req: NextRequest) {
 
   const authHeader = req.headers.get("authorization");
   let userEmail = "";
+  let uid = "";
   if (authHeader?.startsWith("Bearer ")) {
     const token = authHeader.substring(7);
     try {
       const decoded = await adminAuth.verifyIdToken(token);
       userEmail = decoded.email || "";
+      uid = decoded.uid || "";
     } catch (err) {
       console.error("[scrape-job] Auth verification failed:", err);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -263,7 +266,7 @@ export async function POST(req: NextRequest) {
       parsed = { ...parsed, ...parseJobDetails(text, url) };
     } else if (isMarc || (apiKey && apiKey.trim())) {
       try {
-        const { object } = await withModelFallback((provider as AIProvider) || "openai", apiKey, (model) =>
+        const { result, modelId } = await withModelFallback((provider as AIProvider) || "openai", apiKey, (model) =>
           generateObject({
             model,
             schema: z.object({
@@ -280,7 +283,13 @@ TEXT:
 ${text}`,
           })
         );
-        parsed = { ...parsed, ...object };
+        parsed = { ...parsed, ...result.object };
+        if (uid && result.usage) {
+          await trackTokenUsage(uid, (provider as AIProvider) || "openai", result.usage.inputTokens || 0, result.usage.outputTokens || 0, {
+            feature: "scrape-job",
+            modelId,
+          });
+        }
       } catch (aiErr) {
         console.error("[scrape-job] AI parsing failed:", aiErr);
         parsed = { ...parsed, ...parseJobDetails(text, url) };

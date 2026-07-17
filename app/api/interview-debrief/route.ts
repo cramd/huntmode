@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
   });
 
   try {
-    const result = await withModelFallback(activeProvider, apiKey, (model) =>
+    const { result, modelId } = await withModelFallback(activeProvider, apiKey, (model) =>
       generateObject({
         model,
         prompt,
@@ -97,7 +97,10 @@ export async function POST(req: NextRequest) {
     );
 
     if (uid && result.usage) {
-      await trackTokenUsage(uid, activeProvider, result.usage.inputTokens || 0, result.usage.outputTokens || 0);
+      await trackTokenUsage(uid, activeProvider, result.usage.inputTokens || 0, result.usage.outputTokens || 0, {
+        feature: "interview-debrief",
+        modelId,
+      });
     }
 
     const debrief = {

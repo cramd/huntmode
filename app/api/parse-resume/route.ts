@@ -75,8 +75,11 @@ export async function POST(req: NextRequest) {
       provider,
       apiKey: apiKeyToUse,
       onUsage: uid
-        ? async (inputTokens, outputTokens) => {
-            await trackTokenUsage(uid, provider, inputTokens, outputTokens);
+        ? async (inputTokens, outputTokens, modelId) => {
+            await trackTokenUsage(uid, provider, inputTokens, outputTokens, {
+              feature: "parse-resume",
+              modelId,
+            });
           }
         : undefined,
     });

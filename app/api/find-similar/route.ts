@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
       jobDescription: typeof jobDescription === "string" ? jobDescription : undefined,
     });
 
-    const { text, usage } = await withModelFallback("google", googleApiKey, (model) =>
+    const { result, modelId } = await withModelFallback("google", googleApiKey, (model) =>
         generateText({
           model,
           prompt,
@@ -131,9 +131,13 @@ export async function POST(req: NextRequest) {
           },
         })
     );
+    const { text, usage } = result;
 
     if (usage) {
-      await trackTokenUsage(uid, "google", usage.inputTokens || 0, usage.outputTokens || 0);
+      await trackTokenUsage(uid, "google", usage.inputTokens || 0, usage.outputTokens || 0, {
+        feature: "find-similar",
+        modelId,
+      });
     }
 
     let queries = parseQueriesFromAiText(text);

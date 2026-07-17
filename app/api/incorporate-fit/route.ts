@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
       company: company || "the company",
     });
 
-    const { text, inputTokens, outputTokens } = await streamTextWithFallback({
+    const { text, inputTokens, outputTokens, modelId } = await streamTextWithFallback({
       provider: (provider as AIProvider) || "openai",
       apiKey,
       prompt,
@@ -111,7 +111,10 @@ export async function POST(req: NextRequest) {
 
     if (uid) {
       try {
-        await trackTokenUsage(uid, (provider as AIProvider) || "openai", inputTokens, outputTokens);
+        await trackTokenUsage(uid, (provider as AIProvider) || "openai", inputTokens, outputTokens, {
+          feature: "incorporate-fit",
+          modelId,
+        });
       } catch (usageErr) {
         console.error("[incorporate-fit] Failed to track token usage:", usageErr);
       }

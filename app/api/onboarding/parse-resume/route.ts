@@ -77,8 +77,11 @@ export async function POST(req: NextRequest) {
       provider: "google",
       apiKey: process.env.GOOGLE_AI_API_KEY,
       includeHints: true,
-      onUsage: async (inputTokens, outputTokens) => {
-        await trackTokenUsage(auth.uid, "google", inputTokens, outputTokens);
+      onUsage: async (inputTokens, outputTokens, modelId) => {
+        await trackTokenUsage(auth.uid, "google", inputTokens, outputTokens, {
+          feature: "onboarding-parse-resume",
+          modelId,
+        });
       },
     });
     return NextResponse.json({ sections, hints });

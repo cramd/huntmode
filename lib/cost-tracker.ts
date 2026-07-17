@@ -1,57 +1,131 @@
 import { adminDb } from "@/lib/firebase-admin";
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import type { AIProvider, UsageEvent, UsageFeature } from "@/lib/types";
 
-export function calculateCost(provider: string, inputTokens: number, outputTokens: number): number {
-  let inputPricePer1M = 0;
-  let outputPricePer1M = 0;
+export type TrackUsageMetadata = {
+  feature: UsageFeature;
+  modelId?: string;
+  applicationId?: string;
+};
 
-  if (provider === "google") {
-    // Gemini 3.5 Flash pricing (approx)
-    inputPricePer1M = 0.075;
-    outputPricePer1M = 0.30;
-  } else if (provider === "anthropic") {
-    // Claude Sonnet 4.x pricing (approx)
-    inputPricePer1M = 3.00;
-    outputPricePer1M = 15.00;
-  } else {
-    // OpenAI GPT-4o pricing
-    inputPricePer1M = 5.00;
-    outputPricePer1M = 15.00;
+type ModelRates = { inputPer1M: number; outputPer1M: number };
+
+/** Approximate USD per 1M tokens — update when provider pricing changes. */
+const MODEL_RATES: Record<string, ModelRates> = {
+  "gemini-3.5-flash": { inputPer1M: 0.075, outputPer1M: 0.3 },
+  "gemini-3.1-flash-lite": { inputPer1M: 0.075, outputPer1M: 0.3 },
+  "gemini-flash-latest": { inputPer1M: 0.075, outputPer1M: 0.3 },
+  "claude-sonnet-4-6": { inputPer1M: 3.0, outputPer1M: 15.0 },
+  "claude-sonnet-4-5-20250929": { inputPer1M: 3.0, outputPer1M: 15.0 },
+  "gpt-4o": { inputPer1M: 5.0, outputPer1M: 15.0 },
+};
+
+const PROVIDER_DEFAULT_RATES: Record<string, ModelRates> = {
+  google: { inputPer1M: 0.075, outputPer1M: 0.3 },
+  anthropic: { inputPer1M: 3.0, outputPer1M: 15.0 },
+  openai: { inputPer1M: 5.0, outputPer1M: 15.0 },
+};
+
+function resolveRates(provider: string, modelId?: string): ModelRates {
+  if (modelId && MODEL_RATES[modelId]) {
+    return MODEL_RATES[modelId];
   }
-
-  const cost = (inputTokens / 1000000) * inputPricePer1M + (outputTokens / 1000000) * outputPricePer1M;
-  return cost;
+  return PROVIDER_DEFAULT_RATES[provider] ?? PROVIDER_DEFAULT_RATES.openai;
 }
 
-export async function trackTokenUsage(uid: string, provider: string, inputTokens: number, outputTokens: number) {
+export function calculateCost(
+  provider: string,
+  inputTokens: number,
+  outputTokens: number,
+  modelId?: string
+): number {
+  const { inputPer1M, outputPer1M } = resolveRates(provider, modelId);
+  return (
+    (inputTokens / 1_000_000) * inputPer1M +
+    (outputTokens / 1_000_000) * outputPer1M
+  );
+}
+
+export async function trackTokenUsage(
+  uid: string,
+  provider: string,
+  inputTokens: number,
+  outputTokens: number,
+  metadata: TrackUsageMetadata
+): Promise<void> {
   if (!uid) return;
-  
+
   const totalTokens = inputTokens + outputTokens;
-  const costUsd = calculateCost(provider, inputTokens, outputTokens);
+  if (totalTokens <= 0) return;
+
+  const costUsd = calculateCost(provider, inputTokens, outputTokens, metadata.modelId);
+  const normalizedProvider = (provider || "openai") as AIProvider;
+  const resolvedModelId = metadata.modelId || PROVIDER_DEFAULT_MODEL[normalizedProvider];
+
+  const event: Omit<UsageEvent, "id"> = {
+    createdAt: new Date().toISOString(),
+    feature: metadata.feature,
+    provider: normalizedProvider,
+    modelId: resolvedModelId,
+    inputTokens,
+    outputTokens,
+    totalTokens,
+    estimatedCostUsd: costUsd,
+    ...(metadata.applicationId ? { applicationId: metadata.applicationId } : {}),
+  };
 
   try {
-    const userRef = adminDb.collection("users").doc(uid).collection("profile").doc("data");
-    // Use FieldValue.increment to atomically update the stats
-    await userRef.update({
-      totalTokensUsed: FieldValue.increment(totalTokens),
-      totalEstimatedCostUsd: FieldValue.increment(costUsd)
-    });
-    console.log(`[Cost Tracker] Logged ${totalTokens} tokens ($${costUsd.toFixed(5)}) for ${uid}`);
-  } catch (error: any) {
-    // If the fields don't exist yet, we can fall back to set with merge
-    if (error.code === 5) { // NOT_FOUND
+    const profileRef = adminDb.collection("users").doc(uid).collection("profile").doc("data");
+    const eventsRef = adminDb.collection("users").doc(uid).collection("usageEvents");
+
+    await Promise.all([
+      profileRef.update({
+        totalTokensUsed: FieldValue.increment(totalTokens),
+        totalEstimatedCostUsd: FieldValue.increment(costUsd),
+      }),
+      eventsRef.add({
+        ...event,
+        createdAt: Timestamp.fromDate(new Date(event.createdAt)),
+      }),
+    ]);
+
+    console.log(
+      `[Cost Tracker] ${metadata.feature} ${totalTokens} tokens ($${costUsd.toFixed(5)}) model=${resolvedModelId} uid=${uid}`
+    );
+  } catch (error: unknown) {
+    const err = error as { code?: number };
+    if (err.code === 5) {
       try {
-        const userRef = adminDb.collection("users").doc(uid).collection("profile").doc("data");
-        await userRef.set({
-          totalTokensUsed: totalTokens,
-          totalEstimatedCostUsd: costUsd
-        }, { merge: true });
-        console.log(`[Cost Tracker] Initialized ${totalTokens} tokens ($${costUsd.toFixed(5)}) for ${uid}`);
-      } catch (err) {
-        console.error(`[Cost Tracker] Failed to initialize usage for ${uid}:`, err);
+        const profileRef = adminDb.collection("users").doc(uid).collection("profile").doc("data");
+        const eventsRef = adminDb.collection("users").doc(uid).collection("usageEvents");
+        await Promise.all([
+          profileRef.set(
+            {
+              totalTokensUsed: totalTokens,
+              totalEstimatedCostUsd: costUsd,
+            },
+            { merge: true }
+          ),
+          eventsRef.add({
+            ...event,
+            createdAt: Timestamp.fromDate(new Date(event.createdAt)),
+          }),
+        ]);
+        console.log(
+          `[Cost Tracker] Initialized ${metadata.feature} ${totalTokens} tokens ($${costUsd.toFixed(5)}) for ${uid}`
+        );
+      } catch (initErr) {
+        console.error(`[Cost Tracker] Failed to initialize usage for ${uid}:`, initErr);
       }
     } else {
       console.error(`[Cost Tracker] Failed to update usage for ${uid}:`, error);
     }
   }
 }
+
+const PROVIDER_DEFAULT_MODEL: Record<AIProvider, string> = {
+  google: "gemini-3.5-flash",
+  anthropic: "claude-sonnet-4-6",
+  openai: "gpt-4o",
+};
+

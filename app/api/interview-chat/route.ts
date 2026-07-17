@@ -125,8 +125,11 @@ export async function POST(req: NextRequest) {
       originalMessages: data.messages,
       maxOutputTokens: 600,
       onUsage: uid
-        ? async (inputTokens, outputTokens) => {
-            await trackTokenUsage(uid, activeProvider, inputTokens, outputTokens);
+        ? async (inputTokens, outputTokens, modelId) => {
+            await trackTokenUsage(uid, activeProvider, inputTokens, outputTokens, {
+              feature: "interview-chat",
+              modelId,
+            });
           }
         : undefined,
     });

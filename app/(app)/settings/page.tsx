@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
 import { AdminAccessRequests } from "@/components/AdminAccessRequests";
 import { AdminSignupStats } from "@/components/AdminSignupStats";
+import { RecentAiUsage } from "@/components/RecentAiUsage";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -46,9 +47,13 @@ export default function SettingsPage() {
     }
     setTestingKey(true);
     try {
+      const token = await user?.getIdToken();
       const res = await fetch("/api/validate-key", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           provider: profile.aiProvider || "google",
           apiKey: profile.aiApiKey,
@@ -112,6 +117,8 @@ export default function SettingsPage() {
           <AdminAccessRequests />
         </>
       )}
+
+      <RecentAiUsage />
 
       {/* Profile */}
       <Card className="bg-slate-900/40 border-white/5 shadow-xl rounded-2xl overflow-hidden">
