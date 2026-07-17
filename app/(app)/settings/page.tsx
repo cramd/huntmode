@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Save, Key, User, Target, Loader2 } from "lucide-react";
-import { ApiKeyInstructions, apiKeyPlaceholder } from "@/components/ApiKeyInstructions";
+import { ApiKeyInstructions, apiKeyPlaceholder, PROVIDER_MODEL_COPY } from "@/components/ApiKeyInstructions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,7 +50,7 @@ export default function SettingsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          provider: profile.aiProvider || "openai",
+          provider: profile.aiProvider || "google",
           apiKey: profile.aiApiKey,
         }),
       });
@@ -61,7 +61,7 @@ export default function SettingsPage() {
       toast.success(
         data.chatModelId
           ? `API key validated. Practice Coach will use ${data.chatModelId}.`
-          : "API Key is valid and working!"
+          : data.message || "API Key is valid and working!"
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Invalid key";
@@ -77,7 +77,7 @@ export default function SettingsPage() {
     try {
       await saveUserProfile(user.uid, profile);
       captureEvent(AnalyticsEvents.SETTINGS_SAVED, {
-        ai_provider: profile.aiProvider || "openai",
+        ai_provider: profile.aiProvider || "google",
       });
       toast.success("Settings saved!");
     } catch {
@@ -199,7 +199,7 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider">AI Provider</Label>
             <Select
-              value={profile.aiProvider || "openai"}
+              value={profile.aiProvider || "google"}
               onValueChange={(v) =>
                 setProfile((p) => ({ ...p, aiProvider: v as "openai" | "anthropic" | "google" }))
               }
@@ -208,9 +208,15 @@ export default function SettingsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-slate-950 border-white/10 text-white">
-                <SelectItem value="openai" className="text-xs focus:bg-white/5 focus:text-white">OpenAI (GPT-4o)</SelectItem>
-                <SelectItem value="anthropic" className="text-xs focus:bg-white/5 focus:text-white">Anthropic (Claude 3.5 Sonnet)</SelectItem>
-                <SelectItem value="google" className="text-xs focus:bg-white/5 focus:text-white">Google (Gemini 2.5 Flash)</SelectItem>
+                <SelectItem value="google" className="text-xs focus:bg-white/5 focus:text-white">
+                  {PROVIDER_MODEL_COPY.google.label}
+                </SelectItem>
+                <SelectItem value="openai" className="text-xs focus:bg-white/5 focus:text-white">
+                  {PROVIDER_MODEL_COPY.openai.label}
+                </SelectItem>
+                <SelectItem value="anthropic" className="text-xs focus:bg-white/5 focus:text-white">
+                  {PROVIDER_MODEL_COPY.anthropic.label}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -230,7 +236,7 @@ export default function SettingsPage() {
                       setProfile((p) => ({ ...p, aiApiKey: val }));
                     }
                   }}
-                  placeholder={apiKeyPlaceholder(profile.aiProvider || "openai")}
+                  placeholder={apiKeyPlaceholder(profile.aiProvider || "google")}
                   className="bg-slate-950/60 border-white/5 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500 text-white rounded-xl placeholder:text-slate-655 font-mono text-sm"
                 />
               </div>
@@ -251,7 +257,7 @@ export default function SettingsPage() {
                 )}
               </Button>
             </div>
-            <ApiKeyInstructions provider={profile.aiProvider || "openai"} />
+            <ApiKeyInstructions provider={profile.aiProvider || "google"} />
 
             <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
               Your API key is stored in your personal Firestore document and only used for your
@@ -259,9 +265,9 @@ export default function SettingsPage() {
               <code className="bg-slate-950 px-1.5 py-0.5 rounded text-slate-400 font-mono text-[9px]">
                 {profile.aiProvider === "anthropic"
                   ? "ANTHROPIC_API_KEY"
-                  : profile.aiProvider === "google"
-                  ? "GOOGLE_AI_API_KEY"
-                  : "OPENAI_API_KEY"}
+                  : profile.aiProvider === "openai"
+                  ? "OPENAI_API_KEY"
+                  : "GOOGLE_AI_API_KEY"}
               </code>{" "}
               in <code className="bg-slate-950 px-1.5 py-0.5 rounded text-slate-400 font-mono text-[9px] hover:text-white transition-colors">.env.local</code>.
             </p>

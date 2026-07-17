@@ -1,30 +1,56 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateDocument, validateChatCapability } from "@/lib/ai";
-import type { AIProvider } from "@/lib/ai";
+import {
+  validateChatCapability,
+  withModelFallback,
+  formatAIError,
+  type AIProvider,
+} from "@/lib/ai";
+import { generateText } from "ai";
 
 export async function POST(req: NextRequest) {
   try {
-    const { provider, apiKey } = await req.json() as { provider?: string; apiKey?: string };
+    const { provider, apiKey } = (await req.json()) as {
+      provider?: string;
+      apiKey?: string;
+    };
 
     if (!provider || !apiKey) {
-      return NextResponse.json({ error: "Provider and API Key are required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Provider and API Key are required." },
+        { status: 400 }
+      );
     }
 
     const activeProvider = provider as AIProvider;
 
-    const result = await generateDocument({
-      jobDescription: "Test connection.",
-      masterResume: "Test connection.",
-      role: "Tester",
-      company: "Tester Inc",
-      type: "cv",
-      provider: activeProvider,
-      apiKey: apiKey,
-    });
-
-    const reader = result.textStream.getReader();
-    await reader.read();
-    await reader.cancel();
+    // Document probe: use generateText (not a partial stream read).
+    // Partial textStream reads can return done/empty without surfacing the real API error.
+    try {
+      const docProbe = await withModelFallback(activeProvider, apiKey, (model) =>
+        generateText({
+          model,
+          prompt:
+            "Write a one-line resume summary for a software engineer. Max 20 words.",
+          maxOutputTokens: 64,
+          maxRetries: 0,
+          ...(activeProvider === "google"
+            ? {
+                providerOptions: {
+                  google: { thinkingConfig: { thinkingBudget: 0 } },
+                },
+              }
+            : {}),
+        })
+      );
+      const docText = (docProbe.text || "").trim();
+      if (!docText) {
+        throw new Error("Document generation returned an empty response.");
+      }
+    } catch (docErr) {
+      throw new Error(
+        `Document generation failed: ${formatAIError(docErr)}. Check that your API key can access the recommended model for this provider.`
+      );
+    }
 
     const chatCheck = await validateChatCapability(activeProvider, apiKey);
     if (!chatCheck.ok) {

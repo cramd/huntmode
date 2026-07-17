@@ -42,6 +42,7 @@ import type { Application, InterviewSection, InterviewPrepData, UserProfile, Mas
 import InterviewChat from "@/components/InterviewChat";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
 
 interface InterviewPrepProps {
   application: Application;
@@ -665,7 +666,19 @@ export default function InterviewPrep({ application, onUpdate, userProfile, mast
               Switch between live talking-point HUD and AI practice coach.
             </p>
           </div>
-          <Tabs value={prepView} onValueChange={(value) => setPrepView(value as "hud" | "coach")} className="w-full">
+          <Tabs
+            value={prepView}
+            onValueChange={(value) => {
+              const nextView = value as "hud" | "coach";
+              setPrepView(nextView);
+              captureEvent(AnalyticsEvents.INTERVIEW_PREP_VIEW_CHANGED, {
+                application_id: application.id,
+                view: nextView,
+                previous_view: prepView,
+              });
+            }}
+            className="w-full"
+          >
             <TabsList className="bg-slate-900/60 border border-white/10 p-1.5 h-auto w-full sm:w-auto gap-1.5 rounded-2xl">
               <TabsTrigger
                 value="hud"

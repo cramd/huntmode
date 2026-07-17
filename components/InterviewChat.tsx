@@ -49,6 +49,7 @@ import type {
   MasterResume,
   UserProfile,
 } from "@/lib/types";
+import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
 
 interface InterviewChatProps {
   application: Application;
@@ -245,9 +246,11 @@ export default function InterviewChat({
       return;
     }
 
-    if (likelyQuestions.length === 0) {
+    let bankSize = likelyQuestions.length;
+    if (bankSize === 0) {
       const generatedQuestions = await handleGenerateLikelyQuestions();
       if (!generatedQuestions?.length) return;
+      bankSize = generatedQuestions.length;
     }
 
     const sessionId = `chat_${Date.now()}`;
@@ -255,6 +258,14 @@ export default function InterviewChat({
     setIsReadOnlySession(false);
     setActiveDebrief(null);
     setShouldBootstrapSession(true);
+    captureEvent(AnalyticsEvents.INTERVIEW_SESSION_STARTED, {
+      application_id: application.id,
+      company: application.company,
+      role: application.role,
+      mode,
+      focus,
+      question_bank_size: bankSize,
+    });
   };
 
   const handleSendAnswer = async () => {
@@ -266,6 +277,13 @@ export default function InterviewChat({
     }
     setInput("");
     await sendMessage({ text: trimmed });
+    captureEvent(AnalyticsEvents.INTERVIEW_ANSWER_SENT, {
+      application_id: application.id,
+      mode,
+      focus,
+      answer_number: userTurnCount + 1,
+      answer_length: trimmed.length,
+    });
   };
 
   const handleEndSession = async () => {
@@ -323,6 +341,20 @@ export default function InterviewChat({
       await saveSession(session);
       setActiveDebrief(data as InterviewChatDebrief);
       setIsReadOnlySession(true);
+      const debrief = data as InterviewChatDebrief;
+      captureEvent(AnalyticsEvents.INTERVIEW_SESSION_COMPLETED, {
+        application_id: application.id,
+        company: application.company,
+        role: application.role,
+        mode,
+        focus,
+        answer_count: userTurnCount,
+        questions_asked: session.questionsAsked?.length ?? 0,
+        clarity: debrief.clarity,
+        structure: debrief.structure,
+        specificity: debrief.specificity,
+        role_fit: debrief.roleFit,
+      });
       toast.success("Scorecard saved to this application.");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Could not generate scorecard.";
@@ -339,6 +371,13 @@ export default function InterviewChat({
     setMessages(fromStoredMessages(session.messages));
     setActiveDebrief(session.debrief ?? null);
     setIsReadOnlySession(true);
+    captureEvent(AnalyticsEvents.INTERVIEW_SESSION_REPLAYED, {
+      application_id: application.id,
+      mode: session.mode,
+      focus: session.focus ?? "general",
+      message_count: session.messages.length,
+      has_debrief: Boolean(session.debrief),
+    });
   };
 
   async function handleGenerateLikelyQuestions(): Promise<string[] | null> {
@@ -375,13 +414,21 @@ export default function InterviewChat({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to generate questions.");
-      setLikelyQuestions(data.questions);
+      const questions = data.questions as string[];
+      setLikelyQuestions(questions);
       await persistPrep({
-        likelyQuestions: data.questions,
+        likelyQuestions: questions,
         likelyQuestionsGeneratedAt: new Date().toISOString(),
       });
+      captureEvent(AnalyticsEvents.INTERVIEW_QUESTIONS_GENERATED, {
+        application_id: application.id,
+        company: application.company,
+        role: application.role,
+        question_count: questions.length,
+        regenerated: likelyQuestions.length > 0,
+      });
       toast.success("Likely questions ready — use them to warm up before chatting.");
-      return data.questions as string[];
+      return questions;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Could not generate questions.";
       toast.error(message);
@@ -498,7 +545,15 @@ export default function InterviewChat({
                       role="radio"
                       aria-checked={isActive}
                       disabled={sessionLocked}
-                      onClick={() => setMode(modeKey)}
+                      onClick={() => {
+                        if (modeKey === mode) return;
+                        setMode(modeKey);
+                        captureEvent(AnalyticsEvents.INTERVIEW_MODE_SELECTED, {
+                          application_id: application.id,
+                          mode: modeKey,
+                          previous_mode: mode,
+                        });
+                      }}
                       className={cn(
                         "rounded-xl border p-3.5 text-left transition-all cursor-pointer",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50",
@@ -561,7 +616,15 @@ export default function InterviewChat({
                     key={option.value}
                     type="button"
                     disabled={Boolean(activeSessionId) && !isReadOnlySession}
-                    onClick={() => setFocus(option.value)}
+                    onClick={() => {
+                      if (option.value === focus) return;
+                      setFocus(option.value);
+                      captureEvent(AnalyticsEvents.INTERVIEW_FOCUS_SELECTED, {
+                        application_id: application.id,
+                        focus: option.value,
+                        previous_focus: focus,
+                      });
+                    }}
                     aria-pressed={focus === option.value}
                     className={cn(
                       "rounded-xl px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide border transition-all cursor-pointer",

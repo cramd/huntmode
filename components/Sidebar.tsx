@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Newspaper,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -32,6 +33,7 @@ const navItems: {
   { href: "/applications", label: "Applications", icon: Briefcase },
   { href: "/goals", label: "Goals", icon: Target },
   { href: "/resume", label: "My Resume", icon: FileText },
+  { href: "/changelog", label: "What's New", icon: Megaphone },
   { href: "/blog/", label: "Blog", icon: Newspaper },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

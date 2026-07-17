@@ -4,6 +4,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import {
   createUIMessageStream,
   createUIMessageStreamResponse,
+  generateText,
   streamText,
   type LanguageModel,
   type ModelMessage,
@@ -18,6 +19,17 @@ const GOOGLE_MODEL_IDS = [
   "gemini-flash-latest",
 ] as const;
 
+const ANTHROPIC_MODEL_IDS = [
+  "claude-sonnet-4-6",
+  "claude-sonnet-4-5-20250929",
+] as const;
+
+const CHAT_PROBE_MAX_TOKENS = 64;
+
+function googleProviderOptions() {
+  return { google: { thinkingConfig: { thinkingBudget: 0 } } } as const;
+}
+
 export interface GenerateParams {
   jobDescription: string;
   masterResume: string;
@@ -31,7 +43,7 @@ export interface GenerateParams {
 export function getModel(provider: AIProvider = "openai", apiKey?: string) {
   if (provider === "anthropic") {
     const anthropic = createAnthropic({ apiKey: apiKey || process.env.ANTHROPIC_API_KEY });
-    return anthropic("claude-3-5-sonnet-20241022");
+    return anthropic(ANTHROPIC_MODEL_IDS[0]);
   }
 
   if (provider === "google") {
@@ -57,7 +69,7 @@ export function isTransientModelError(err: unknown): boolean {
   );
 }
 
-export function isGoogleModelFallbackError(err: unknown): boolean {
+export function isModelFallbackError(err: unknown): boolean {
   const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
   return (
     isTransientModelError(err) ||
@@ -65,8 +77,16 @@ export function isGoogleModelFallbackError(err: unknown): boolean {
     msg.includes("is not supported") ||
     msg.includes("shut down") ||
     msg.includes("no longer available") ||
-    msg.includes("update your code to use a newer model")
+    msg.includes("update your code to use a newer model") ||
+    msg.includes("invalid model") ||
+    msg.includes("empty response") ||
+    (msg.includes("model:") && msg.includes("does not exist"))
   );
+}
+
+/** @deprecated Use isModelFallbackError — kept for existing Google call sites */
+export function isGoogleModelFallbackError(err: unknown): boolean {
+  return isModelFallbackError(err);
 }
 
 export function formatAIError(err: unknown): string {
@@ -85,19 +105,39 @@ export async function withModelFallback<T>(
   apiKey: string | undefined,
   run: (model: LanguageModel) => T | Promise<T>
 ): Promise<T> {
-  if (provider !== "google") {
+  if (provider === "openai") {
     return run(getModel(provider, apiKey));
   }
 
-  const google = createGoogleGenerativeAI({ apiKey: apiKey || process.env.GOOGLE_AI_API_KEY });
+  const candidates =
+    provider === "google"
+      ? (() => {
+          const google = createGoogleGenerativeAI({
+            apiKey: apiKey || process.env.GOOGLE_AI_API_KEY,
+          });
+          return GOOGLE_MODEL_IDS.map((modelId) => ({
+            model: google(modelId) as LanguageModel,
+            modelId,
+          }));
+        })()
+      : (() => {
+          const anthropic = createAnthropic({
+            apiKey: apiKey || process.env.ANTHROPIC_API_KEY,
+          });
+          return ANTHROPIC_MODEL_IDS.map((modelId) => ({
+            model: anthropic(modelId) as LanguageModel,
+            modelId,
+          }));
+        })();
+
   let lastError: unknown;
 
-  for (const modelId of GOOGLE_MODEL_IDS) {
+  for (const { model, modelId } of candidates) {
     try {
-      return await run(google(modelId));
+      return await run(model);
     } catch (err) {
       lastError = err;
-      if (!isGoogleModelFallbackError(err)) throw err;
+      if (!isModelFallbackError(err)) throw err;
       console.warn(
         `[ai] ${modelId} unavailable (${err instanceof Error ? err.message : err}), trying next model...`
       );
@@ -116,7 +156,8 @@ export function getChatModelsForProvider(
     return GOOGLE_MODEL_IDS.map((modelId) => ({ model: google(modelId), modelId }));
   }
   if (provider === "anthropic") {
-    return [{ model: getModel("anthropic", apiKey), modelId: "claude-3-5-sonnet-20241022" }];
+    const anthropic = createAnthropic({ apiKey: apiKey || process.env.ANTHROPIC_API_KEY });
+    return ANTHROPIC_MODEL_IDS.map((modelId) => ({ model: anthropic(modelId), modelId }));
   }
   return [{ model: getModel("openai", apiKey), modelId: "gpt-4o" }];
 }
@@ -130,24 +171,24 @@ export async function validateChatCapability(
 
   for (const { model, modelId } of models) {
     try {
-      const result = streamText({
+      const result = await generateText({
         model,
         system: "You are a connectivity test assistant.",
         messages: [{ role: "user", content: "Reply with exactly: OK" }],
-        maxOutputTokens: 16,
+        maxOutputTokens: CHAT_PROBE_MAX_TOKENS,
         maxRetries: 0,
+        ...(provider === "google"
+          ? { providerOptions: googleProviderOptions() }
+          : {}),
       });
-      const chunks: string[] = [];
-      for await (const chunk of result.textStream) {
-        chunks.push(chunk);
-      }
-      if (!chunks.join("").trim()) {
+      const text = (result.text || "").trim();
+      if (!text) {
         throw new Error("Chat returned an empty response.");
       }
       return { ok: true, modelId };
     } catch (err) {
       lastError = err;
-      if (provider !== "google" || !isGoogleModelFallbackError(err)) {
+      if ((provider !== "google" && provider !== "anthropic") || !isModelFallbackError(err)) {
         return { ok: false, error: formatAIError(err) };
       }
     }
@@ -185,6 +226,9 @@ export function createChatStreamResponseWithFallback(params: {
             messages: params.messages,
             maxOutputTokens: params.maxOutputTokens ?? 600,
             maxRetries: 0,
+            ...(params.provider === "google"
+              ? { providerOptions: googleProviderOptions() }
+              : {}),
           });
 
           for await (const chunk of result.toUIMessageStream()) {
@@ -203,7 +247,10 @@ export function createChatStreamResponseWithFallback(params: {
           return;
         } catch (err) {
           lastError = err;
-          if (params.provider !== "google" || !isGoogleModelFallbackError(err)) {
+          if (
+            (params.provider !== "google" && params.provider !== "anthropic") ||
+            !isModelFallbackError(err)
+          ) {
             throw err;
           }
         }
@@ -396,7 +443,15 @@ export async function generateDocument(params: GenerateParams) {
     : buildCoverLetterPrompt(params);
 
   return withModelFallback(params.provider || "openai", params.apiKey, (model) =>
-    streamText({ model, prompt, maxOutputTokens: 4000, maxRetries: 1 })
+    streamText({
+      model,
+      prompt,
+      maxOutputTokens: 4000,
+      maxRetries: 1,
+      ...(params.provider === "google"
+        ? { providerOptions: googleProviderOptions() }
+        : {}),
+    })
   );
 }
 
@@ -415,7 +470,14 @@ export async function streamTextWithFallback(params: {
           });
           return google(modelId);
         })
-      : [getModel(provider, params.apiKey)];
+      : provider === "anthropic"
+        ? ANTHROPIC_MODEL_IDS.map((modelId) => {
+            const anthropic = createAnthropic({
+              apiKey: params.apiKey || process.env.ANTHROPIC_API_KEY,
+            });
+            return anthropic(modelId);
+          })
+        : [getModel(provider, params.apiKey)];
 
   let lastError: unknown;
   for (const model of models) {
@@ -425,6 +487,9 @@ export async function streamTextWithFallback(params: {
         prompt: params.prompt,
         maxOutputTokens: params.maxOutputTokens ?? 4000,
         maxRetries: 1,
+        ...(provider === "google"
+          ? { providerOptions: googleProviderOptions() }
+          : {}),
       });
       const chunks: string[] = [];
       for await (const chunk of result.textStream) {
@@ -440,7 +505,9 @@ export async function streamTextWithFallback(params: {
       };
     } catch (err) {
       lastError = err;
-      if (provider !== "google" || !isGoogleModelFallbackError(err)) throw err;
+      if ((provider !== "google" && provider !== "anthropic") || !isModelFallbackError(err)) {
+        throw err;
+      }
       console.warn(
         `[ai] stream failed (${err instanceof Error ? err.message : err}), trying next model...`
       );

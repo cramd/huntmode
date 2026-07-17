@@ -93,6 +93,12 @@ export function LoginAuthPanel({
           <HuntModeBrand variant="stacked" href="/" className="items-start text-left" />
           <nav className="flex items-center gap-4 pt-1 text-sm">
             <Link
+              href="/changelog"
+              className="font-medium text-slate-400 transition-colors hover:text-white"
+            >
+              What&apos;s New
+            </Link>
+            <Link
               href="/blog/"
               className="font-medium text-slate-400 transition-colors hover:text-white"
             >

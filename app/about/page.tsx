@@ -92,6 +92,12 @@ export default function AboutPage() {
         <HuntModeBrand variant="inline" href="/" />
         <nav className="flex items-center gap-3 sm:gap-4">
           <Link
+            href="/changelog"
+            className="text-sm font-medium text-slate-400 transition-colors hover:text-white"
+          >
+            What&apos;s New
+          </Link>
+          <Link
             href="/blog/"
             className="text-sm font-medium text-slate-400 transition-colors hover:text-white"
           >

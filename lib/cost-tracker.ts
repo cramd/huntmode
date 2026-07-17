@@ -6,15 +6,15 @@ export function calculateCost(provider: string, inputTokens: number, outputToken
   let outputPricePer1M = 0;
 
   if (provider === "google") {
-    // Gemini Flash pricing
+    // Gemini 3.5 Flash pricing (approx)
     inputPricePer1M = 0.075;
     outputPricePer1M = 0.30;
   } else if (provider === "anthropic") {
-    // Claude 3.5 Sonnet pricing
+    // Claude Sonnet 4.x pricing (approx)
     inputPricePer1M = 3.00;
     outputPricePer1M = 15.00;
   } else {
-    // Default to OpenAI GPT-4o pricing
+    // OpenAI GPT-4o pricing
     inputPricePer1M = 5.00;
     outputPricePer1M = 15.00;
   }

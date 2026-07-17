@@ -14,6 +14,15 @@ export const AnalyticsEvents = {
   SETTINGS_SAVED: "settings_saved",
   ONBOARDING_COMPLETED: "onboarding_completed",
   SIMILAR_ROLES_SEARCHED: "similar_roles_searched",
+  INTERVIEW_PREP_VIEW_CHANGED: "interview_prep_view_changed",
+  INTERVIEW_MODE_SELECTED: "interview_mode_selected",
+  INTERVIEW_FOCUS_SELECTED: "interview_focus_selected",
+  INTERVIEW_QUESTIONS_GENERATED: "interview_questions_generated",
+  INTERVIEW_SESSION_STARTED: "interview_session_started",
+  INTERVIEW_ANSWER_SENT: "interview_answer_sent",
+  INTERVIEW_SESSION_COMPLETED: "interview_session_completed",
+  INTERVIEW_SESSION_REPLAYED: "interview_session_replayed",
+  CHANGELOG_VIEWED: "changelog_viewed",
 } as const;
 
 export type AnalyticsEventName = (typeof AnalyticsEvents)[keyof typeof AnalyticsEvents];

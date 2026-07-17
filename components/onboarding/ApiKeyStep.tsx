@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ApiKeyInstructions, apiKeyPlaceholder } from "@/components/ApiKeyInstructions";
+import { ApiKeyInstructions, apiKeyPlaceholder, PROVIDER_MODEL_COPY } from "@/components/ApiKeyInstructions";
 import type { UserProfile } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -114,13 +114,13 @@ export function ApiKeyStep({
             </SelectTrigger>
             <SelectContent className="border-white/10 bg-slate-950 text-white">
               <SelectItem value="google" className="text-xs focus:bg-white/5 focus:text-white">
-                Google Gemini (recommended)
+                {PROVIDER_MODEL_COPY.google.label}
               </SelectItem>
               <SelectItem value="openai" className="text-xs focus:bg-white/5 focus:text-white">
-                OpenAI (GPT-4o)
+                {PROVIDER_MODEL_COPY.openai.label}
               </SelectItem>
               <SelectItem value="anthropic" className="text-xs focus:bg-white/5 focus:text-white">
-                Anthropic (Claude)
+                {PROVIDER_MODEL_COPY.anthropic.label}
               </SelectItem>
             </SelectContent>
           </Select>
