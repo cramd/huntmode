@@ -287,7 +287,7 @@ Instructions:
 - Be concise: target 1-2 pages when printed
 - Do NOT fabricate any experience, certifications, or skills not present in the master resume
 
-Output the tailored resume in clean markdown format.`;
+Output ONLY the resume body in clean markdown. Do not include any intro sentence, explanation, or code fences (no \`\`\`markdown). Start directly with the candidate name or the first section heading.`;
 }
 
 export function buildCoverLetterPrompt(params: GenerateParams): string {

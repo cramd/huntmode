@@ -65,9 +65,12 @@ import type { Application, MasterResume, ApplicationStatus, InterviewPrepData } 
 import { STATUS_CONFIG, CATEGORY_CONFIG, ORG_TYPE_CONFIG } from "@/lib/types";
 import InterviewPrep from "@/components/InterviewPrep";
 import FitInsightCard from "@/components/FitInsightCard";
+import { CvExportMenu } from "@/components/CvExportMenu";
+import { contactFromProfile } from "@/lib/cv-export/contact-header";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { useCompletion } from "@ai-sdk/react";
+import { sanitizeCvMarkdown } from "@/lib/cv-export/sanitize-cv-markdown";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
 import {
   appendFitInsights,
@@ -135,19 +138,20 @@ export default function ApplicationDetailPage() {
       const text = (result && result.trim()) ? result : completionRef.current;
       if (type && user && id && text) {
         const field = type === "cv" ? "generatedCV" : "generatedCoverLetter";
+        const cleaned = type === "cv" ? sanitizeCvMarkdown(text) : text;
         const previous = type === "cv" ? docSnapshotRef.current.cv : docSnapshotRef.current.cl;
         if (previous.trim()) {
           if (type === "cv") setCvUndoStack((s) => pushUndoSnapshot(s, previous));
           else setClUndoStack((s) => pushUndoSnapshot(s, previous));
         }
-        setEditForm((f) => ({ ...f, [field]: text }));
-        setApp((a) => a ? { ...a, [field]: text } : null);
+        setEditForm((f) => ({ ...f, [field]: cleaned }));
+        setApp((a) => a ? { ...a, [field]: cleaned } : null);
         docSnapshotRef.current = {
           ...docSnapshotRef.current,
-          [type === "cv" ? "cv" : "cl"]: text,
+          [type === "cv" ? "cv" : "cl"]: cleaned,
         };
         try {
-          await updateApplication(user.uid, id, { [field]: text });
+          await updateApplication(user.uid, id, { [field]: cleaned });
           captureEvent(AnalyticsEvents.DOCUMENT_GENERATED, { type });
           toast.success(`${type === "cv" ? "CV" : "Cover letter"} generated and saved!`);
         } catch {
@@ -1070,6 +1074,20 @@ export default function ApplicationDetailPage() {
                       >
                         {copied === "cv" ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                       </Button>
+                      <CvExportMenu
+                        markdown={getDocumentText("cv")}
+                        company={editForm.company || app.company || "Company"}
+                        role={editForm.role || app.role || "Role"}
+                        contact={contactFromProfile(
+                          userProfile
+                            ? {
+                                ...userProfile,
+                                email: userProfile.email || user?.email || "",
+                              }
+                            : null
+                        )}
+                        disabled={!getDocumentText("cv")}
+                      />
                       {masterResume && (
                         <Button
                           variant="outline"

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCompletion } from "@ai-sdk/react";
+import { sanitizeCvMarkdown } from "@/lib/cv-export/sanitize-cv-markdown";
 import {
   Link2,
   FileText,
@@ -173,7 +174,7 @@ export default function NewApplicationPage() {
     api: "/api/generate",
     streamProtocol: "text",
     onFinish: (_, result) => {
-      update("generatedCV", result);
+      update("generatedCV", sanitizeCvMarkdown(result || ""));
     },
     onError: (e) => setGenError(e.message || "CV generation failed"),
   });

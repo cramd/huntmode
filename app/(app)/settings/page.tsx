@@ -144,6 +144,38 @@ export default function SettingsPage() {
               <Input value={user?.email ?? ""} disabled className="bg-slate-950/20 border-white/5 text-slate-500 rounded-xl" />
             </div>
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Location</Label>
+              <Input
+                value={profile.location || ""}
+                onChange={(e) => setProfile((p) => ({ ...p, location: e.target.value }))}
+                placeholder="e.g. Vancouver, BC"
+                className="bg-slate-950/60 border-white/5 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500 text-white rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Phone</Label>
+              <Input
+                value={profile.phone || ""}
+                onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))}
+                placeholder="e.g. +1 604 555 0100"
+                className="bg-slate-950/60 border-white/5 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500 text-white rounded-xl"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider">LinkedIn</Label>
+            <Input
+              value={profile.linkedIn || ""}
+              onChange={(e) => setProfile((p) => ({ ...p, linkedIn: e.target.value }))}
+              placeholder="e.g. linkedin.com/in/yourname"
+              className="bg-slate-950/60 border-white/5 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500 text-white rounded-xl"
+            />
+            <p className="text-[10px] text-slate-500 font-medium">
+              Name, email, and these fields are added to the top of every CV export.
+            </p>
+          </div>
           <div className="space-y-2">
             <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Target Role</Label>
             <Input

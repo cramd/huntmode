@@ -231,6 +231,10 @@ export interface UserProfile {
   uid: string;
   name: string;
   email: string;
+  /** Contact details used on exported CVs (shared across applications). */
+  phone?: string;
+  linkedIn?: string;
+  location?: string;
   targetRole: string;
   weeklyGoal: number;
   currentStreak: number;
