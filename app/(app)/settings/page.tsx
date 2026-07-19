@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, Key, User, Target, Loader2 } from "lucide-react";
+import { Save, Key, User, Target, Loader2, Heart } from "lucide-react";
 import { ApiKeyInstructions, apiKeyPlaceholder, PROVIDER_MODEL_COPY } from "@/components/ApiKeyInstructions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,8 @@ import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
 import { AdminAccessRequests } from "@/components/AdminAccessRequests";
 import { AdminSignupStats } from "@/components/AdminSignupStats";
 import { RecentAiUsage } from "@/components/RecentAiUsage";
+import { TipThanksButton } from "@/components/TipThanksButton";
+import { isTippingEnabled } from "@/lib/tipping";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -225,6 +227,28 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {isTippingEnabled() && (
+        <Card className="bg-slate-900/40 border-amber-500/15 shadow-xl rounded-2xl overflow-hidden">
+          <CardHeader className="pb-2 pt-4 px-5">
+            <CardTitle className="flex items-center gap-2 text-sm font-bold text-white tracking-wide uppercase">
+              <Heart className="w-4 h-4 text-amber-400" />
+              Support HuntMode
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 px-5 pb-5">
+            <p className="text-xs leading-relaxed text-slate-400 font-medium">
+              HuntMode is free forever with your own API key. Optional tips help
+              cover hosting and development when the hunt starts paying off.
+            </p>
+            <TipThanksButton
+              source="settings"
+              label="Say thanks with a tip"
+              className="justify-center font-bold"
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* AI Config */}
       <Card className="bg-slate-900/40 border-white/5 shadow-xl rounded-2xl overflow-hidden">

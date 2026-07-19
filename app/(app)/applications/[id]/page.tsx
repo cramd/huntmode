@@ -78,6 +78,12 @@ import {
   popUndoSnapshot,
   pushUndoSnapshot,
 } from "@/lib/undo-stack";
+import { TipCelebrationDialog } from "@/components/TipCelebrationDialog";
+import {
+  isTipMilestoneStatus,
+  shouldCelebrateMilestone,
+  type TipMilestoneStatus,
+} from "@/lib/tipping";
 
 export function getCategoryIcon(iconName: string) {
   switch (iconName) {
@@ -103,6 +109,7 @@ export default function ApplicationDetailPage() {
   const [editForm, setEditForm] = useState<Partial<Application>>({});
   const [saving, setSaving] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const [tipMilestone, setTipMilestone] = useState<TipMilestoneStatus | null>(null);
   const [copied, setCopied] = useState<"cv" | "cl" | null>(null);
   const [masterResume, setMasterResume] = useState<MasterResume | null>(null);
   const [generating, setGenerating] = useState<"cv" | "cl" | null>(null);
@@ -248,6 +255,7 @@ export default function ApplicationDetailPage() {
 
   const handleStatusChange = async (status: ApplicationStatus) => {
     if (!user || !id || !app) return;
+    const previousStatus = app.status;
     const update: Partial<Application> = { status };
     if (status === "applied" && !app.appliedAt) {
       update.appliedAt = new Date().toISOString();
@@ -255,6 +263,15 @@ export default function ApplicationDetailPage() {
     await updateApplication(user.uid, id, update);
     setApp((a) => a ? { ...a, ...update } : null);
     toast.success(`Status updated to ${STATUS_CONFIG[status].label}`);
+
+    // Congratulatory tip ask when the hunt heats up (new milestone only)
+    if (
+      status !== previousStatus &&
+      isTipMilestoneStatus(status) &&
+      shouldCelebrateMilestone(status)
+    ) {
+      setTipMilestone(status);
+    }
   };
 
   const handleCopy = (type: "cv" | "cl") => {
@@ -1647,6 +1664,16 @@ export default function ApplicationDetailPage() {
       </Tabs>
 
       {/* Delete Dialog */}
+      <TipCelebrationDialog
+        open={tipMilestone !== null}
+        status={tipMilestone}
+        company={app.company}
+        role={app.role}
+        onOpenChange={(open) => {
+          if (!open) setTipMilestone(null);
+        }}
+      />
+
       <Dialog open={showDelete} onOpenChange={setShowDelete}>
         <DialogContent className="bg-slate-900 border-white/5 rounded-2xl max-w-sm p-6">
           <DialogHeader>

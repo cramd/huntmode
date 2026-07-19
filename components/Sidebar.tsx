@@ -24,6 +24,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HuntModeBrand } from "@/components/HuntModeBrand";
+import { TipThanksButton } from "@/components/TipThanksButton";
+import { isTippingEnabled } from "@/lib/tipping";
 
 const navItems: {
   href: string;
@@ -186,6 +188,22 @@ export default function Sidebar({
           )}
         </div>
       </div>
+
+      {/* Optional tip — keeps hosting & development going */}
+      {isTippingEnabled() && (
+        <div className={cn("pb-3", isCollapsed && !isMobile ? "px-0" : "px-3")}>
+          <TipThanksButton
+            source="sidebar"
+            iconOnly={isCollapsed && !isMobile}
+            label="Say thanks"
+            className={
+              isCollapsed && !isMobile
+                ? undefined
+                : "border-amber-500/15 bg-transparent text-sidebar-foreground/55 hover:bg-amber-500/10 hover:text-amber-200 text-xs font-semibold h-9"
+            }
+          />
+        </div>
+      )}
 
       {/* User Section */}
       <div
