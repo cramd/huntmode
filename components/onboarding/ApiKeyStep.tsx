@@ -16,6 +16,7 @@ import {
 import { ApiKeyInstructions, apiKeyPlaceholder, PROVIDER_MODEL_COPY } from "@/components/ApiKeyInstructions";
 import type { UserProfile } from "@/lib/types";
 import { toast } from "sonner";
+import { isTippingEnabled } from "@/lib/tipping";
 
 type AiProvider = NonNullable<UserProfile["aiProvider"]>;
 
@@ -225,6 +226,13 @@ export function ApiKeyStep({
       {aiApiKey.trim() && !keyValidated && (
         <p className="text-center text-[10px] text-slate-500">
           Test your key before continuing, or use Skip for now.
+        </p>
+      )}
+
+      {isTippingEnabled() && (
+        <p className="text-center text-[10px] leading-relaxed text-slate-500">
+          HuntMode stays free — optional tips help cover hosting when the hunt
+          starts paying off.
         </p>
       )}
     </div>

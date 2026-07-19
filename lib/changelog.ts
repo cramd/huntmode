@@ -22,6 +22,22 @@ export type ChangelogRelease = {
  */
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    date: "2026-07-19",
+    title: "Say thanks — tips when the hunt heats up",
+    summary:
+      "Optional tipping to support hosting, with a sparkle celebration when you land screens and interviews.",
+    items: [
+      {
+        kind: "new",
+        text: "Sparkle celebration when an application moves to Phone Screen, Interview, or Offer — with an optional tip ask while the win is fresh.",
+      },
+      {
+        kind: "new",
+        text: "Soft “HuntMode stays free” tip intro on the dashboard after onboarding, plus Say thanks in the sidebar and Settings.",
+      },
+    ],
+  },
+  {
     date: "2026-07-16",
     title: "Practice Coach & clearer application controls",
     summary:

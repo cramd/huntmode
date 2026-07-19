@@ -23,6 +23,11 @@ export const AnalyticsEvents = {
   INTERVIEW_SESSION_COMPLETED: "interview_session_completed",
   INTERVIEW_SESSION_REPLAYED: "interview_session_replayed",
   CHANGELOG_VIEWED: "changelog_viewed",
+  TIP_INTRO_SHOWN: "tip_intro_shown",
+  TIP_INTRO_DISMISSED: "tip_intro_dismissed",
+  TIP_MILESTONE_SHOWN: "tip_milestone_shown",
+  TIP_MILESTONE_DISMISSED: "tip_milestone_dismissed",
+  TIP_CTA_CLICKED: "tip_cta_clicked",
 } as const;
 
 export type AnalyticsEventName = (typeof AnalyticsEvents)[keyof typeof AnalyticsEvents];

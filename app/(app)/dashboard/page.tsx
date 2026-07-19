@@ -35,6 +35,7 @@ import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO } from "date
 import { Compass, Megaphone, Sliders, FileText } from "lucide-react";
 import { GettingStartedCard } from "@/components/GettingStartedCard";
 import { FindSimilarRolesButton } from "@/components/FindSimilarRolesButton";
+import { TipIntroCard } from "@/components/TipIntroCard";
 
 const STATUS_COLORS: Record<string, string> = {
   applied: "#6366f1",
@@ -266,6 +267,9 @@ export default function DashboardPage() {
           onDismiss={() => setOnboardingDismissed(true)}
         />
       )}
+
+      {/* Soft tip intro — early journey, dismissible once */}
+      {profile?.onboardingCompletedAt && <TipIntroCard />}
 
       {/* Top row: Stats + Streak + Weekly Goal — responsive grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">

@@ -37,6 +37,14 @@ NEXT_PUBLIC_POSTHOG_KEY=phc_your_project_token
 NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
 ```
 
+Optional tipping (“Say thanks”) — Buy Me a Coffee, Ko-fi, Stripe Payment Link, etc.:
+
+```env
+NEXT_PUBLIC_TIP_URL=https://buymeacoffee.com/yourpage
+```
+
+When set, HuntMode shows a soft tip intro after onboarding, a sidebar/Settings CTA, and a sparkle celebration with a tip ask when applications move to Phone Screen, Interview, or Offer. Omit the variable to hide all tip UI.
+
 ### 3. Deploy Firestore Rules
 
 ```bash
