@@ -94,6 +94,7 @@ function StatTile({
 
 function UserDirectoryTable({ users }: { users: AdminUserRow[] }) {
   const totalApps = users.reduce((sum, u) => sum + u.applicationCount, 0);
+  const totalTokens = users.reduce((sum, u) => sum + u.totalTokensUsed, 0);
   const totalCost = users.reduce((sum, u) => sum + u.totalEstimatedCostUsd, 0);
 
   return (
@@ -163,6 +164,26 @@ function UserDirectoryTable({ users }: { users: AdminUserRow[] }) {
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr className="border-t border-white/10 bg-slate-950/40">
+                <td
+                  colSpan={3}
+                  className="px-3 py-2.5 font-bold text-slate-300 uppercase tracking-wider text-[10px]"
+                >
+                  Subtotal
+                </td>
+                <td className="px-3 py-2.5 text-right font-bold text-white tabular-nums">
+                  {totalApps}
+                </td>
+                <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-slate-200">
+                  {totalTokens.toLocaleString()}
+                </td>
+                <td className="px-3 py-2.5 text-right tabular-nums font-bold text-amber-200">
+                  ${totalCost.toFixed(4)}
+                </td>
+                <td className="px-3 py-2.5" />
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
@@ -221,6 +242,25 @@ function UsageRollupTable({ stats }: { stats: SignupStats["usageSummary"] }) {
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr className="border-t border-white/10 bg-slate-950/40">
+                <td
+                  colSpan={2}
+                  className="px-3 py-2.5 font-bold text-slate-300 uppercase tracking-wider text-[10px]"
+                >
+                  Subtotal
+                </td>
+                <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-slate-200">
+                  {stats.totalEvents}
+                </td>
+                <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-slate-200">
+                  {stats.totalTokens.toLocaleString()}
+                </td>
+                <td className="px-3 py-2.5 text-right tabular-nums font-bold text-amber-200">
+                  ${stats.estimatedCostUsd.toFixed(4)}
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
