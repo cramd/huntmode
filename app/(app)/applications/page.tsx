@@ -15,9 +15,9 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
 import { getApplications, deleteApplication, getMasterResumes, getUserProfile } from "@/lib/db";
+import { formatApplicationDate, getApplicationStatusConfig } from "@/lib/application-display";
 import type { Application, ApplicationStatus, MasterResume, UserProfile } from "@/lib/types";
 import { STATUS_CONFIG, CATEGORY_CONFIG, type ResumeCategory } from "@/lib/types";
-import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { FindSimilarRolesButton } from "@/components/FindSimilarRolesButton";
 
@@ -38,7 +38,7 @@ export function getCategoryIcon(iconName: string) {
 }
 
 export default function ApplicationsPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
   const [resumes, setResumes] = useState<MasterResume[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -50,18 +50,46 @@ export default function ApplicationsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    // #region agent log
+    fetch('http://127.0.0.1:7755/ingest/515e276b-97ed-4604-80f1-6f57f7bffddb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7e1cb3'},body:JSON.stringify({sessionId:'7e1cb3',runId:'apps-page',hypothesisId:'A',location:'applications/page.tsx:load-effect',message:'Applications load effect',data:{authLoading,hasUser:Boolean(user),uid:user?.uid??null},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
     Promise.all([
       getApplications(user.uid),
       getMasterResumes(user.uid),
       getUserProfile(user.uid),
-    ]).then(([apps, rs, prof]) => {
-      setApplications(apps);
-      setResumes(rs);
-      setProfile(prof);
-      setLoading(false);
-    });
-  }, [user]);
+    ])
+      .then(([apps, rs, prof]) => {
+        if (cancelled) return;
+        setApplications(apps);
+        setResumes(rs);
+        setProfile(prof);
+        setLoading(false);
+        // #region agent log
+        const invalidAppliedDates = apps.filter(
+          (app) => app.appliedAt && !formatApplicationDate(app.appliedAt)
+        ).length;
+        fetch('http://127.0.0.1:7755/ingest/515e276b-97ed-4604-80f1-6f57f7bffddb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7e1cb3'},body:JSON.stringify({sessionId:'7e1cb3',runId:'apps-crash',hypothesisId:'A',location:'applications/page.tsx:load-success',message:'Applications loaded',data:{appCount:apps.length,invalidAppliedDates,unknownStatuses:apps.filter(a=>!(a.status in STATUS_CONFIG)).map(a=>a.status)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setLoading(false);
+        const message = err instanceof Error ? err.message : String(err);
+        // #region agent log
+        fetch('http://127.0.0.1:7755/ingest/515e276b-97ed-4604-80f1-6f57f7bffddb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7e1cb3'},body:JSON.stringify({sessionId:'7e1cb3',runId:'apps-page',hypothesisId:'A',location:'applications/page.tsx:load-error',message:'Applications load failed',data:{error:message},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        toast.error("Could not load applications");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, authLoading]);
 
   const resumeMap = useMemo(() => {
     const map: Record<string, MasterResume> = {};
@@ -207,7 +235,7 @@ export default function ApplicationsPage() {
             {/* Mobile card list */}
             <div className="md:hidden divide-y divide-white/5">
               {filtered.map((app) => {
-                const cfg = STATUS_CONFIG[app.status];
+                const cfg = getApplicationStatusConfig(app.status);
                 const resume = app.resumeUsed ? resumeMap[app.resumeUsed] : null;
                 const cat = resume?.category || "general";
                 const catCfg = CATEGORY_CONFIG[cat];
@@ -269,9 +297,7 @@ export default function ApplicationsPage() {
                         </span>
                       ) : null}
                       <span className="text-[10px] text-slate-500 font-medium">
-                        {app.appliedAt
-                          ? format(parseISO(app.appliedAt), "MMM d, yyyy")
-                          : "Not applied yet"}
+                        {formatApplicationDate(app.appliedAt) ?? "Not applied yet"}
                       </span>
                     </div>
                     {app.notes && (
@@ -314,7 +340,7 @@ export default function ApplicationsPage() {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {filtered.map((app) => {
-                    const cfg = STATUS_CONFIG[app.status];
+                    const cfg = getApplicationStatusConfig(app.status);
                     const resume = app.resumeUsed ? resumeMap[app.resumeUsed] : null;
                     const cat = resume?.category || "general";
                     const catCfg = CATEGORY_CONFIG[cat];
@@ -352,9 +378,9 @@ export default function ApplicationsPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3.5 text-slate-400 font-medium">
-                          {app.appliedAt
-                            ? format(parseISO(app.appliedAt), "MMM d, yyyy")
-                            : <span className="text-slate-500 italic">Not yet</span>}
+                          {formatApplicationDate(app.appliedAt) ?? (
+                            <span className="text-slate-500 italic">Not yet</span>
+                          )}
                         </td>
                         <td className="px-4 py-3.5">
                           {app.fitScore ? (

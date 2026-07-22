@@ -77,8 +77,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
         setUserProfile(profile);
         setOnboardingChecked(true);
-      } catch {
-        if (!cancelled) setOnboardingChecked(true);
+        // #region agent log
+        fetch('http://127.0.0.1:7755/ingest/515e276b-97ed-4604-80f1-6f57f7bffddb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7e1cb3'},body:JSON.stringify({sessionId:'7e1cb3',runId:'apps-page',hypothesisId:'C',location:'app/layout.tsx:onboarding-ok',message:'Onboarding check passed',data:{applicationCount:applications.length,resumeCount:resumes.length},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+      } catch (err) {
+        if (!cancelled) {
+          setOnboardingChecked(true);
+          const message = err instanceof Error ? err.message : String(err);
+          // #region agent log
+          fetch('http://127.0.0.1:7755/ingest/515e276b-97ed-4604-80f1-6f57f7bffddb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7e1cb3'},body:JSON.stringify({sessionId:'7e1cb3',runId:'apps-page',hypothesisId:'C',location:'app/layout.tsx:onboarding-error',message:'Onboarding check failed',data:{error:message},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+        }
       }
     })();
     return () => {
