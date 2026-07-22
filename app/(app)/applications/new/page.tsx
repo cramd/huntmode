@@ -30,7 +30,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/context/AuthContext";
 import { createApplication, getMasterResumes, logActivity, getUserProfile } from "@/lib/db";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
-import { type MasterResume, type UserProfile, CATEGORY_CONFIG, getCategoryConfig } from "@/lib/types";
+import { type MasterResume, type UserProfile, getCategoryConfig } from "@/lib/types";
 import { toast } from "sonner";
 import { useEffect } from "react";
 import { WorkdayFetchNotice } from "@/components/WorkdayFetchNotice";
