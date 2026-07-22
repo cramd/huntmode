@@ -46,7 +46,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getMasterResumes, saveMasterResume, deleteMasterResume, getUserProfile, getApplications } from "@/lib/db";
 import { SEED_RESUMES } from "@/lib/seed-resumes";
 import type { MasterResume, UserProfile, ProjectEntry, Application } from "@/lib/types";
-import { STATUS_CONFIG, CATEGORY_CONFIG, type ResumeCategory } from "@/lib/types";
+import { STATUS_CONFIG, CATEGORY_CONFIG, getCategoryConfig, type ResumeCategory } from "@/lib/types";
 import { toast } from "sonner";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
 import { popUndoSnapshot, pushUndoSnapshot } from "@/lib/undo-stack";
@@ -497,7 +497,7 @@ export default function ResumePage() {
           {/* Sidebar: Resume list */}
           <div className="space-y-2">
             {resumes.map((r) => {
-              const catCfg = CATEGORY_CONFIG[r.category || "general"];
+              const catCfg = getCategoryConfig(r.category);
               const CatIcon = getCategoryIcon(catCfg.iconName);
               const isActive = activeId === r.id;
               return (

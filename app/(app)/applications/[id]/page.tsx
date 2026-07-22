@@ -62,7 +62,7 @@ import {
 } from "@/lib/db";
 import type { UserProfile, ResumeCategory, OrgType, FitScore, SimilarRole, FitInsightCardType } from "@/lib/types";
 import type { Application, MasterResume, ApplicationStatus, InterviewPrepData } from "@/lib/types";
-import { STATUS_CONFIG, CATEGORY_CONFIG, ORG_TYPE_CONFIG } from "@/lib/types";
+import { STATUS_CONFIG, CATEGORY_CONFIG, ORG_TYPE_CONFIG, getCategoryConfig } from "@/lib/types";
 import InterviewPrep from "@/components/InterviewPrep";
 import FitInsightCard from "@/components/FitInsightCard";
 import { CvExportMenu } from "@/components/CvExportMenu";
@@ -781,7 +781,7 @@ export default function ApplicationDetailPage() {
                 ) : null
               )}
               {masterResume && (() => {
-                const catCfg = CATEGORY_CONFIG[masterResume.category || "general"];
+                const catCfg = getCategoryConfig(masterResume.category);
                 const CatIcon = getCategoryIcon(catCfg.iconName);
                 return (
                   <div className="border-t border-white/5 pt-3">

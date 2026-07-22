@@ -17,7 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getApplications, deleteApplication, getMasterResumes, getUserProfile } from "@/lib/db";
 import { formatApplicationDate, getApplicationStatusConfig } from "@/lib/application-display";
 import type { Application, ApplicationStatus, MasterResume, UserProfile } from "@/lib/types";
-import { STATUS_CONFIG, CATEGORY_CONFIG, type ResumeCategory } from "@/lib/types";
+import { STATUS_CONFIG, CATEGORY_CONFIG, getCategoryConfig, type ResumeCategory } from "@/lib/types";
 import { toast } from "sonner";
 import { FindSimilarRolesButton } from "@/components/FindSimilarRolesButton";
 
@@ -237,8 +237,7 @@ export default function ApplicationsPage() {
               {filtered.map((app) => {
                 const cfg = getApplicationStatusConfig(app.status);
                 const resume = app.resumeUsed ? resumeMap[app.resumeUsed] : null;
-                const cat = resume?.category || "general";
-                const catCfg = CATEGORY_CONFIG[cat];
+                const catCfg = getCategoryConfig(resume?.category);
                 const CatIcon = getCategoryIcon(catCfg.iconName);
                 return (
                   <div
@@ -342,8 +341,7 @@ export default function ApplicationsPage() {
                   {filtered.map((app) => {
                     const cfg = getApplicationStatusConfig(app.status);
                     const resume = app.resumeUsed ? resumeMap[app.resumeUsed] : null;
-                    const cat = resume?.category || "general";
-                    const catCfg = CATEGORY_CONFIG[cat];
+                    const catCfg = getCategoryConfig(resume?.category);
                     const CatIcon = getCategoryIcon(catCfg.iconName);
 
                     return (

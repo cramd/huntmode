@@ -168,6 +168,37 @@ export const CATEGORY_CONFIG: Record<
   },
 };
 
+/** Normalize stored resume categories; unknown values fall back to general. */
+export function resolveResumeCategory(
+  category: string | null | undefined
+): ResumeCategory {
+  if (category && category in CATEGORY_CONFIG) {
+    return category as ResumeCategory;
+  }
+  // #region agent log
+  if (typeof window !== "undefined" && category) {
+    fetch("http://127.0.0.1:7755/ingest/515e276b-97ed-4604-80f1-6f57f7bffddb", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "7e1cb3" },
+      body: JSON.stringify({
+        sessionId: "7e1cb3",
+        runId: "category-fix",
+        hypothesisId: "E",
+        location: "lib/types.ts:resolveResumeCategory",
+        message: "Unknown resume category normalized",
+        data: { category: String(category).slice(0, 64) },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+  }
+  // #endregion
+  return "general";
+}
+
+export function getCategoryConfig(category: string | null | undefined) {
+  return CATEGORY_CONFIG[resolveResumeCategory(category)];
+}
+
 export interface MasterResume {
   id: string;
   uid: string;

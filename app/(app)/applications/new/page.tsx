@@ -30,7 +30,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/context/AuthContext";
 import { createApplication, getMasterResumes, logActivity, getUserProfile } from "@/lib/db";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
-import { type MasterResume, type UserProfile, CATEGORY_CONFIG } from "@/lib/types";
+import { type MasterResume, type UserProfile, CATEGORY_CONFIG, getCategoryConfig } from "@/lib/types";
 import { toast } from "sonner";
 import { useEffect } from "react";
 import { WorkdayFetchNotice } from "@/components/WorkdayFetchNotice";
@@ -502,7 +502,7 @@ export default function NewApplicationPage() {
             ) : (
               <div className="grid grid-cols-1 gap-3">
                 {resumes.map((r) => {
-                  const catCfg = CATEGORY_CONFIG[r.category || "general"];
+                  const catCfg = getCategoryConfig(r.category);
                   const CatIcon = getCategoryIcon(catCfg.iconName);
                   return (
                     <button

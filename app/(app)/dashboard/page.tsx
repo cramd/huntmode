@@ -30,7 +30,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { getApplications, getActivityLogs, getUserProfile, getGoals, getMasterResumes } from "@/lib/db";
 import type { Application, ActivityLog, UserProfile, Goal, MasterResume } from "@/lib/types";
-import { STATUS_CONFIG, MOTIVATIONAL_MESSAGES, CATEGORY_CONFIG, ORG_TYPE_CONFIG, type ResumeCategory, type OrgType } from "@/lib/types";
+import { STATUS_CONFIG, MOTIVATIONAL_MESSAGES, CATEGORY_CONFIG, ORG_TYPE_CONFIG, resolveResumeCategory, getCategoryConfig, type ResumeCategory, type OrgType } from "@/lib/types";
+import { formatApplicationDate, getApplicationStatusConfig } from "@/lib/application-display";
 import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO } from "date-fns";
 import { Compass, Megaphone, Sliders, FileText } from "lucide-react";
 import { GettingStartedCard } from "@/components/GettingStartedCard";
@@ -181,7 +182,7 @@ export default function DashboardPage() {
     applications.forEach((a) => {
       if (!a.resumeUsed) return;
       const resume = resumeMap[a.resumeUsed];
-      const category = resume?.category || "general";
+      const category = resolveResumeCategory(resume?.category);
       counts[category] = (counts[category] || 0) + 1;
     });
 
@@ -578,7 +579,7 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-2.5">
                 {(Object.keys(CATEGORY_CONFIG) as ResumeCategory[]).map((cat) => {
-                  const catCfg = CATEGORY_CONFIG[cat];
+                  const catCfg = getCategoryConfig(cat);
                   const count = categoryStats.counts[cat] || 0;
                   const pct = categoryStats.total > 0 ? Math.round((count / categoryStats.total) * 100) : 0;
                   const CatIcon = getCategoryIcon(catCfg.iconName);
@@ -637,7 +638,8 @@ export default function DashboardPage() {
           ) : (
             <div className="divide-y divide-white/5">
               {applications.slice(0, 7).map((app) => {
-                const cfg = STATUS_CONFIG[app.status];
+                const cfg = getApplicationStatusConfig(app.status);
+                const appliedLabel = formatApplicationDate(app.appliedAt, "MMM d");
                 return (
                   <div
                     key={app.id}
@@ -660,9 +662,9 @@ export default function DashboardPage() {
                         <p className="text-[10px] text-slate-400 mt-0.5 truncate">{app.company}</p>
                       </div>
                       <div className="flex items-center gap-3 shrink-0 ml-3">
-                        {app.appliedAt && (
+                        {appliedLabel && (
                           <span className="text-[10px] text-slate-500 font-medium">
-                            {format(parseISO(app.appliedAt), "MMM d")}
+                            {appliedLabel}
                           </span>
                         )}
                         <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-current/25 bg-current/10 ${cfg.color}`}>
