@@ -50,9 +50,6 @@ export default function ApplicationsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7755/ingest/515e276b-97ed-4604-80f1-6f57f7bffddb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7e1cb3'},body:JSON.stringify({sessionId:'7e1cb3',runId:'apps-page',hypothesisId:'A',location:'applications/page.tsx:load-effect',message:'Applications load effect',data:{authLoading,hasUser:Boolean(user),uid:user?.uid??null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (authLoading) return;
     if (!user) {
       setLoading(false);
@@ -70,20 +67,10 @@ export default function ApplicationsPage() {
         setResumes(rs);
         setProfile(prof);
         setLoading(false);
-        // #region agent log
-        const invalidAppliedDates = apps.filter(
-          (app) => app.appliedAt && !formatApplicationDate(app.appliedAt)
-        ).length;
-        fetch('http://127.0.0.1:7755/ingest/515e276b-97ed-4604-80f1-6f57f7bffddb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7e1cb3'},body:JSON.stringify({sessionId:'7e1cb3',runId:'apps-crash',hypothesisId:'A',location:'applications/page.tsx:load-success',message:'Applications loaded',data:{appCount:apps.length,invalidAppliedDates,unknownStatuses:apps.filter(a=>!(a.status in STATUS_CONFIG)).map(a=>a.status)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
       })
-      .catch((err: unknown) => {
+      .catch(() => {
         if (cancelled) return;
         setLoading(false);
-        const message = err instanceof Error ? err.message : String(err);
-        // #region agent log
-        fetch('http://127.0.0.1:7755/ingest/515e276b-97ed-4604-80f1-6f57f7bffddb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7e1cb3'},body:JSON.stringify({sessionId:'7e1cb3',runId:'apps-page',hypothesisId:'A',location:'applications/page.tsx:load-error',message:'Applications load failed',data:{error:message},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         toast.error("Could not load applications");
       });
     return () => {

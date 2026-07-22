@@ -290,9 +290,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(timeout);
       if (u) {
         logDiagnostic(`onAuthStateChanged: User is signed in. Email: ${u.email}, UID: ${u.uid}`);
-        // #region agent log
-        fetch('http://127.0.0.1:7755/ingest/515e276b-97ed-4604-80f1-6f57f7bffddb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7e1cb3'},body:JSON.stringify({sessionId:'7e1cb3',runId:'apps-page',hypothesisId:'B',location:'AuthContext.tsx:onAuthStateChanged',message:'Auth user present',data:{uid:u.uid,emailDomain:u.email?.split('@')[1]??null},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         // Marc is automatically approved
         if (u.email === "marcsherwood@gmail.com") {
           logDiagnostic("User is administrator (Marc). Auto-approving access.");
@@ -301,15 +298,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           syncAnalyticsForUser(u, { status: "approved", isNewRegistration: false });
           await ensureUserProfile(u);
           setLoading(false);
-          // #region agent log
-          fetch('http://127.0.0.1:7755/ingest/515e276b-97ed-4604-80f1-6f57f7bffddb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7e1cb3'},body:JSON.stringify({sessionId:'7e1cb3',runId:'apps-page',hypothesisId:'B',location:'AuthContext.tsx:admin-access',message:'Auth loading finished',data:{accessStatus:'approved'},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
         } else {
           logDiagnostic(`Resolving access for user ${u.email}...`);
-          let resolvedStatus = "unknown";
           try {
             const resolution = await resolveAccessForUser(u);
-            resolvedStatus = resolution.status;
             logDiagnostic(`Access resolved: ${resolution.status}`);
             setAccessStatus(resolution.status);
             setUser(u);
@@ -320,14 +312,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } catch (err) {
             console.error("[Auth] Error resolving access:", err);
             logDiagnostic(`Error resolving access: ${(err as Error).message}`);
-            resolvedStatus = "none";
             setAccessStatus("none");
             setUser(u);
           } finally {
             setLoading(false);
-            // #region agent log
-            fetch('http://127.0.0.1:7755/ingest/515e276b-97ed-4604-80f1-6f57f7bffddb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7e1cb3'},body:JSON.stringify({sessionId:'7e1cb3',runId:'apps-page',hypothesisId:'B',location:'AuthContext.tsx:access-resolved',message:'Auth loading finished',data:{accessStatus:resolvedStatus},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
           }
         }
       } else {

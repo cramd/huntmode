@@ -11,21 +11,6 @@ export default function AppSegmentError({
 }) {
   useEffect(() => {
     console.error("[HuntMode] app error boundary:", error.message, error.digest);
-    // #region agent log
-    fetch("http://127.0.0.1:7755/ingest/515e276b-97ed-4604-80f1-6f57f7bffddb", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "7e1cb3" },
-      body: JSON.stringify({
-        sessionId: "7e1cb3",
-        runId: "apps-crash",
-        hypothesisId: "A",
-        location: "app/(app)/error.tsx",
-        message: "App segment error boundary",
-        data: { errorMessage: error.message, digest: error.digest ?? null },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
   }, [error]);
 
   return (
