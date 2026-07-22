@@ -22,6 +22,42 @@ export type ChangelogRelease = {
  */
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    date: "2026-07-22",
+    title: "Revision chat, exports & onboarding polish",
+    summary:
+      "Chat your way to better CVs and cover letters, export both as PDF/DOCX, and set up your export contact profile during onboarding. Thanks Rod for the great suggestions.",
+    items: [
+      {
+        kind: "new",
+        text: "CV revision chat on each application — request tone or focus changes, then Apply to your tailored CV with Undo.",
+      },
+      {
+        kind: "new",
+        text: "Cover letter revision chat with the same Apply + Undo flow as CVs.",
+      },
+      {
+        kind: "new",
+        text: "Export cover letters as PDF or DOCX (Classic ATS or Modern Compact), with your contact header, date, and role line.",
+      },
+      {
+        kind: "improved",
+        text: "Onboarding is now five steps with sticky actions, clearer next-step hints, and a Contact profile step for export headers.",
+      },
+      {
+        kind: "improved",
+        text: "Tooltips and consistent AI labels on CV/cover letter toolbars (Tailor, Regenerate, Export, Save, Undo).",
+      },
+      {
+        kind: "improved",
+        text: "Settings → Export contact profile explains how name, phone, location, and LinkedIn appear on exports — update anytime for a new hunt.",
+      },
+      {
+        kind: "improved",
+        text: "Thanks to Rod for being a good pony and pushing some of the best ideas in this release.",
+      },
+    ],
+  },
+  {
     date: "2026-07-19",
     title: "Say thanks — tips when the hunt heats up",
     summary:

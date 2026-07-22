@@ -1,7 +1,6 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { OnboardingDraftSuggestion } from "@/lib/types";
@@ -11,8 +10,6 @@ interface ReviewDraftsStepProps {
   error: string | null;
   onUpdateDraft: (index: number, patch: Partial<OnboardingDraftSuggestion>) => void;
   onRemoveDraft: (index: number) => void;
-  onBack: () => void;
-  onContinue: () => void;
 }
 
 export function ReviewDraftsStep({
@@ -20,16 +17,14 @@ export function ReviewDraftsStep({
   error,
   onUpdateDraft,
   onRemoveDraft,
-  onBack,
-  onContinue,
 }: ReviewDraftsStepProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <h2 className="text-2xl font-black text-white">Your starter draft roles</h2>
         <p className="text-sm leading-relaxed text-slate-400">
-          Three paint-by-numbers targets to get you moving. Edit anything, then we&apos;ll save
-          your Master Resume and import these as draft applications.
+          Three paint-by-numbers targets to get you moving. Edit anything here — your Master Resume
+          and draft applications are saved when you finish setup on the last step.
         </p>
       </div>
 
@@ -90,20 +85,6 @@ export function ReviewDraftsStep({
             </div>
           </div>
         ))}
-      </div>
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-        <Button type="button" variant="ghost" onClick={onBack} className="text-slate-400 hover:text-white">
-          Back
-        </Button>
-        <Button
-          type="button"
-          onClick={onContinue}
-          disabled={drafts.length === 0}
-          className="bg-gradient-to-r from-indigo-600 to-purple-600 font-bold text-white hover:from-indigo-500 hover:to-purple-500"
-        >
-          Continue
-        </Button>
       </div>
     </div>
   );

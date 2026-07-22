@@ -127,10 +127,15 @@ export default function SettingsPage() {
         <CardHeader className="pb-2 pt-4 px-5">
           <CardTitle className="flex items-center gap-2 text-sm font-bold text-white tracking-wide uppercase">
             <User className="w-4 h-4 text-indigo-400" />
-            Profile
+            Export contact profile
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 px-5 pb-5">
+          <p className="text-xs leading-relaxed text-slate-400">
+            This header block is injected into every CV and cover letter export. Keep one profile
+            per account — change it here when you want different contact details for a new hunt
+            without changing your sign-in email.
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Display Name</Label>
@@ -175,7 +180,8 @@ export default function SettingsPage() {
               className="bg-slate-950/60 border-white/5 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500 text-white rounded-xl"
             />
             <p className="text-[10px] text-slate-500 font-medium">
-              Name, email, and these fields are added to the top of every CV export.
+              Used on PDF and DOCX exports. Add at least your name before exporting — location,
+              phone, and LinkedIn are optional but recommended.
             </p>
           </div>
           <div className="space-y-2">

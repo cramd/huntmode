@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Key, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,9 +29,6 @@ interface ApiKeyStepProps {
   onChangeProvider: (provider: AiProvider) => void;
   onChangeApiKey: (key: string) => void;
   onKeyValidated: () => void;
-  onBack: () => void;
-  onSkip: () => void;
-  onComplete: () => void;
 }
 
 export function ApiKeyStep({
@@ -43,9 +40,6 @@ export function ApiKeyStep({
   onChangeProvider,
   onChangeApiKey,
   onKeyValidated,
-  onBack,
-  onSkip,
-  onComplete,
 }: ApiKeyStepProps) {
   const [testing, setTesting] = useState(false);
   const [testError, setTestError] = useState<string | null>(null);
@@ -79,8 +73,6 @@ export function ApiKeyStep({
       setTesting(false);
     }
   };
-
-  const canFinishWithKey = !aiApiKey.trim() || keyValidated;
 
   return (
     <div className="space-y-6">
@@ -182,50 +174,9 @@ export function ApiKeyStep({
         . Keys are stored in your profile and only used for your requests.
       </p>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onBack}
-          disabled={completing}
-          className="text-slate-400 hover:text-white"
-        >
-          Back
-        </Button>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onSkip}
-            disabled={completing}
-            className="text-slate-400 hover:text-white"
-          >
-            Skip for now
-          </Button>
-          <Button
-            type="button"
-            onClick={onComplete}
-            disabled={completing || !canFinishWithKey}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 font-bold text-white hover:from-indigo-500 hover:to-purple-500"
-          >
-            {completing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Setting up your hunt…
-              </>
-            ) : (
-              <>
-                <Key className="mr-2 h-4 w-4" />
-                {aiApiKey.trim() ? "Save key & start hunting" : "Start hunting"}
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-
       {aiApiKey.trim() && !keyValidated && (
         <p className="text-center text-[10px] text-slate-500">
-          Test your key before continuing, or use Skip for now.
+          Test your key before finishing, or choose Skip for now on the bar below.
         </p>
       )}
 

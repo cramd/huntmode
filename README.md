@@ -9,6 +9,13 @@ Your ADHD-friendly job search command center. Track applications, generate AI-ta
 - **Goals & Streaks** — Daily checklists, streak calendar (GitHub-style heatmap), and motivational milestones
 - **Dashboard** — Application funnel, weekly progress ring, activity chart, and recent applications
 - **Master Resume** — Store multiple resume variants; the AI adapts the right one per role
+- **Document revision chat** — Iterate on tailored CVs and cover letters in natural language, then Apply or Undo
+- **PDF/DOCX export** — Download tailored CVs and cover letters with your contact header
+- **Onboarding & tooltips** — Sticky primary actions, export contact profile setup, and consistent AI action labels
+
+## Thanks
+
+Shout-out to **Rod** for being a good pony and surfacing some of the best feature ideas in this release — revision chat, export polish, onboarding contact profiles, and clearer AI controls. 🐴
 
 ## Setup
 

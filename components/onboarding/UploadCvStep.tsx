@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import { FileText, Loader2, Upload } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import type { MasterResume } from "@/lib/types";
 import type { ParseResumeHints } from "@/lib/parse-resume";
 
@@ -11,8 +10,6 @@ interface UploadCvStepProps {
   parsing: boolean;
   error: string | null;
   onParse: (file: File) => void;
-  onSkip: () => void;
-  onContinue: () => void;
 }
 
 export function UploadCvStep({
@@ -20,8 +17,6 @@ export function UploadCvStep({
   parsing,
   error,
   onParse,
-  onSkip,
-  onContinue,
 }: UploadCvStepProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -109,25 +104,11 @@ export function UploadCvStep({
         </div>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onSkip}
-          disabled={parsing}
-          className="text-slate-400 hover:text-white"
-        >
-          Skip for now
-        </Button>
-        <Button
-          type="button"
-          onClick={onContinue}
-          disabled={parsing}
-          className="bg-indigo-600 font-bold text-white hover:bg-indigo-500"
-        >
-          {sections ? "Continue" : "Continue without CV"}
-        </Button>
-      </div>
+      {!sections && (
+        <p className="text-xs text-slate-500">
+          No CV yet? You can skip and add one later from Master Resumes.
+        </p>
+      )}
     </div>
   );
 }

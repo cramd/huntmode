@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import type { UserProfile } from "@/lib/types";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const {
@@ -218,6 +219,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     : "U";
 
   return (
+    <TooltipProvider delay={300}>
     <div className="flex min-h-screen bg-background flex-col md:flex-row relative overflow-hidden selection:bg-indigo-500/30">
       {/* Decorative ambient background lights */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
@@ -293,5 +295,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </Link>
       </div>
     </div>
+    </TooltipProvider>
   );
 }

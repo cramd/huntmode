@@ -64,13 +64,21 @@ import type { UserProfile, ResumeCategory, OrgType, FitScore, SimilarRole, FitIn
 import type { Application, MasterResume, ApplicationStatus, InterviewPrepData } from "@/lib/types";
 import { STATUS_CONFIG, CATEGORY_CONFIG, ORG_TYPE_CONFIG, getCategoryConfig } from "@/lib/types";
 import InterviewPrep from "@/components/InterviewPrep";
+import DocumentRevisionChat from "@/components/DocumentRevisionChat";
+import { CoverLetterExportMenu } from "@/components/CoverLetterExportMenu";
+import { ActionTooltip } from "@/components/ActionTooltip";
+import { AI_LEXICON } from "@/lib/ai-lexicon";
+import { userHasAiApiKey } from "@/lib/has-ai-key";
 import FitInsightCard from "@/components/FitInsightCard";
 import { CvExportMenu } from "@/components/CvExportMenu";
 import { contactFromProfile } from "@/lib/cv-export/contact-header";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { useCompletion } from "@ai-sdk/react";
-import { sanitizeCvMarkdown } from "@/lib/cv-export/sanitize-cv-markdown";
+import {
+  sanitizeCoverLetterMarkdown,
+  sanitizeCvMarkdown,
+} from "@/lib/cv-export/sanitize-cv-markdown";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
 import {
   appendFitInsights,
@@ -145,7 +153,10 @@ export default function ApplicationDetailPage() {
       const text = (result && result.trim()) ? result : completionRef.current;
       if (type && user && id && text) {
         const field = type === "cv" ? "generatedCV" : "generatedCoverLetter";
-        const cleaned = type === "cv" ? sanitizeCvMarkdown(text) : text;
+        const cleaned =
+          type === "cv"
+            ? sanitizeCvMarkdown(text)
+            : sanitizeCoverLetterMarkdown(text);
         const previous = type === "cv" ? docSnapshotRef.current.cv : docSnapshotRef.current.cl;
         if (previous.trim()) {
           if (type === "cv") setCvUndoStack((s) => pushUndoSnapshot(s, previous));
@@ -319,6 +330,26 @@ export default function ApplicationDetailPage() {
     } finally {
       setSavingDoc(null);
     }
+  };
+
+  const handleApplyCvRevision = async (revisedMarkdown: string) => {
+    if (!user || !id) return;
+    const previous = editForm.generatedCV || app?.generatedCV || "";
+    const cleaned = sanitizeCvMarkdown(revisedMarkdown);
+    pushDocUndo("cv", previous);
+    setEditForm((f) => ({ ...f, generatedCV: cleaned }));
+    setApp((a) => (a ? { ...a, generatedCV: cleaned } : null));
+    await updateApplication(user.uid, id, { generatedCV: cleaned });
+  };
+
+  const handleApplyCoverLetterRevision = async (revisedMarkdown: string) => {
+    if (!user || !id) return;
+    const previous = editForm.generatedCoverLetter || app?.generatedCoverLetter || "";
+    const cleaned = sanitizeCoverLetterMarkdown(revisedMarkdown);
+    pushDocUndo("cl", previous);
+    setEditForm((f) => ({ ...f, generatedCoverLetter: cleaned }));
+    setApp((a) => (a ? { ...a, generatedCoverLetter: cleaned } : null));
+    await updateApplication(user.uid, id, { generatedCoverLetter: cleaned });
   };
 
   const handleRegenerate = async (type: "cv" | "cl") => {
@@ -826,6 +857,18 @@ export default function ApplicationDetailPage() {
   );
 
   const cfg = STATUS_CONFIG[app.status];
+  const hasAIKey = userHasAiApiKey(user?.email, userProfile);
+  const cvTextForChat = (editForm.generatedCV || app.generatedCV || "").trim();
+  const clTextForChat = (editForm.generatedCoverLetter || app.generatedCoverLetter || "").trim();
+  const masterResumeText = masterResume ? buildMasterResumeText(masterResume) : "";
+  const exportContact = contactFromProfile(
+    userProfile
+      ? {
+          ...userProfile,
+          email: userProfile.email || user?.email || "",
+        }
+      : null
+  );
 
   return (
     <div className={cn("p-4 sm:p-6 lg:p-8 mx-auto space-y-6 transition-all duration-300", activeTab === "interview" ? "max-w-[1600px]" : "max-w-5xl")}>
@@ -864,17 +907,18 @@ export default function ApplicationDetailPage() {
               View Job
             </a>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleAnalyzeFit}
-            disabled={fitLoading || !app.jobDescription}
-            title={!masterResume ? "Select a resume variant first" : !app.jobDescription ? "No job description" : "Analyze fit vs your resume"}
-            className="h-10 sm:h-8 border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10 hover:text-indigo-200 rounded-xl text-xs font-bold"
-          >
-            {fitLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <BarChart2 className="w-3.5 h-3.5 mr-1" />}
-            {fitLoading ? "Analyzing…" : app.fitScore ? `Fit: ${app.fitScore.overall}%` : "Analyze Fit"}
-          </Button>
+          <ActionTooltip label={AI_LEXICON.analyzeFit.tooltip}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAnalyzeFit}
+              disabled={fitLoading || !app.jobDescription}
+              className="h-10 rounded-xl border-indigo-500/30 text-xs font-bold text-indigo-300 hover:bg-indigo-500/10 hover:text-indigo-200 sm:h-8"
+            >
+              {fitLoading ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <BarChart2 className="mr-1 h-3.5 w-3.5" />}
+              {fitLoading ? "Analyzing…" : app.fitScore ? `Fit: ${app.fitScore.overall}%` : AI_LEXICON.analyzeFit.label}
+            </Button>
+          </ActionTooltip>
           <Button
             variant="outline"
             size="sm"
@@ -1025,100 +1069,104 @@ export default function ApplicationDetailPage() {
                     <CardTitle className="text-xs font-bold uppercase tracking-wider text-white">Tailored CV Segment</CardTitle>
                     <div className="flex flex-wrap gap-2 justify-end">
                       {(app.generatedCV || editForm.generatedCV) && (
+                        <ActionTooltip label={AI_LEXICON.suggestions.tooltip}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSuggest("cv")}
+                            disabled={suggestLoading}
+                            className="h-8 w-8 rounded-lg border-white/10 p-0 text-slate-400 hover:bg-white/5 hover:text-white"
+                          >
+                            <MessageSquareText className="h-3.5 w-3.5" />
+                          </Button>
+                        </ActionTooltip>
+                      )}
+                      <ActionTooltip label={AI_LEXICON.cvUpload.tooltip}>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleSuggest("cv")}
-                          disabled={suggestLoading}
-                          className="h-8 w-8 p-0 border-white/10 hover:bg-white/5 text-slate-400 hover:text-white rounded-lg"
-                          title="AI Suggestions"
+                          onClick={() => triggerPdfUpload("cv")}
+                          disabled={uploading === "cv"}
+                          className="h-8 gap-1 rounded-lg border-white/10 px-2 text-[10px] font-bold text-slate-400 hover:bg-white/5 hover:text-white"
                         >
-                          <MessageSquareText className="w-3.5 h-3.5" />
+                          {uploading === "cv" ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Upload className="h-3.5 w-3.5" />
+                          )}
+                          <span className="hidden sm:inline">
+                            {getDocumentText("cv") ? "Replace PDF" : "Upload PDF"}
+                          </span>
                         </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => triggerPdfUpload("cv")}
-                        disabled={uploading === "cv"}
-                        className="h-8 px-2 border-white/10 hover:bg-white/5 text-slate-400 hover:text-white rounded-lg text-[10px] font-bold gap-1"
-                        title="Upload or replace CV from PDF"
-                      >
-                        {uploading === "cv" ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Upload className="w-3.5 h-3.5" />
-                        )}
-                        <span className="hidden sm:inline">
-                          {getDocumentText("cv") ? "Replace PDF" : "Upload PDF"}
-                        </span>
-                      </Button>
+                      </ActionTooltip>
                       {(app.generatedCV || editForm.generatedCV) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSaveDocument("cv")}
-                          disabled={savingDoc === "cv"}
-                          className="h-8 px-2 border-white/10 hover:bg-white/5 text-slate-400 hover:text-white rounded-lg text-[10px] font-bold gap-1"
-                          title="Save CV edits"
-                        >
-                          {savingDoc === "cv" ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <Save className="w-3.5 h-3.5" />
-                          )}
-                          <span className="hidden sm:inline">Save</span>
-                        </Button>
+                        <ActionTooltip label={AI_LEXICON.saveDocument.tooltip}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSaveDocument("cv")}
+                            disabled={savingDoc === "cv"}
+                            className="h-8 gap-1 rounded-lg border-white/10 px-2 text-[10px] font-bold text-slate-400 hover:bg-white/5 hover:text-white"
+                          >
+                            {savingDoc === "cv" ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Save className="h-3.5 w-3.5" />
+                            )}
+                            <span className="hidden sm:inline">Save</span>
+                          </Button>
+                        </ActionTooltip>
                       )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleUndoDocument("cv")}
-                        disabled={cvUndoStack.length === 0}
-                        className="h-8 px-2 border-white/10 hover:bg-white/5 text-slate-400 hover:text-white rounded-lg text-[10px] font-bold gap-1 disabled:opacity-40"
-                        title="Undo last CV change"
-                      >
-                        <Undo2 className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Undo</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCopy("cv")}
-                        disabled={!getDocumentText("cv")}
-                        className="h-8 w-8 p-0 border-white/10 hover:bg-white/5 text-slate-400 hover:text-white rounded-lg"
-                        title="Copy CV"
-                      >
-                        {copied === "cv" ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      </Button>
-                      <CvExportMenu
-                        markdown={getDocumentText("cv")}
-                        company={editForm.company || app.company || "Company"}
-                        role={editForm.role || app.role || "Role"}
-                        contact={contactFromProfile(
-                          userProfile
-                            ? {
-                                ...userProfile,
-                                email: userProfile.email || user?.email || "",
-                              }
-                            : null
-                        )}
-                        disabled={!getDocumentText("cv")}
-                      />
-                      {masterResume && (
+                      <ActionTooltip label={AI_LEXICON.undoDocument.tooltip}>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleRegenerate("cv")}
-                          disabled={genLoading}
-                          className="h-8 w-8 p-0 border-white/10 hover:bg-white/5 text-indigo-400 hover:text-indigo-300 rounded-lg"
+                          onClick={() => handleUndoDocument("cv")}
+                          disabled={cvUndoStack.length === 0}
+                          className="h-8 gap-1 rounded-lg border-white/10 px-2 text-[10px] font-bold text-slate-400 hover:bg-white/5 hover:text-white disabled:opacity-40"
                         >
-                          {genLoading && generating === "cv" ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <Sparkles className="w-3.5 h-3.5" />
-                          )}
+                          <Undo2 className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Undo</span>
                         </Button>
+                      </ActionTooltip>
+                      <ActionTooltip label={AI_LEXICON.copyDocument.tooltip}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopy("cv")}
+                          disabled={!getDocumentText("cv")}
+                          className="h-8 w-8 rounded-lg border-white/10 p-0 text-slate-400 hover:bg-white/5 hover:text-white"
+                        >
+                          {copied === "cv" ? <CheckCheck className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                        </Button>
+                      </ActionTooltip>
+                      <ActionTooltip label={AI_LEXICON.exportCv.tooltip}>
+                        <span>
+                          <CvExportMenu
+                            markdown={getDocumentText("cv")}
+                            company={editForm.company || app.company || "Company"}
+                            role={editForm.role || app.role || "Role"}
+                            contact={exportContact}
+                            disabled={!getDocumentText("cv")}
+                          />
+                        </span>
+                      </ActionTooltip>
+                      {masterResume && (
+                        <ActionTooltip label={AI_LEXICON.cvRegenerate.tooltip}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRegenerate("cv")}
+                            disabled={genLoading}
+                            className="h-8 w-8 rounded-lg border-white/10 p-0 text-indigo-400 hover:bg-white/5 hover:text-indigo-300"
+                          >
+                            {genLoading && generating === "cv" ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Sparkles className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                        </ActionTooltip>
                       )}
                     </div>
                   </div>
@@ -1141,24 +1189,40 @@ export default function ApplicationDetailPage() {
                       <p className="text-sm text-slate-400 font-semibold uppercase tracking-wider">Parsing PDF sections...</p>
                     </div>
                   ) : app.generatedCV || editForm.generatedCV || (generating === "cv" && completion) ? (
-                    <div className="space-y-2">
-                      <Textarea
-                        value={editForm.generatedCV || (generating === "cv" ? completion : "") || ""}
-                        onChange={(e) =>
-                          setEditForm((f) => ({ ...f, generatedCV: e.target.value }))
-                        }
-                        readOnly={genLoading && generating === "cv"}
-                        placeholder="Paste or write your CV content here..."
-                        className={`min-h-[300px] sm:min-h-[500px] font-mono text-xs bg-slate-950 border-white/5 text-slate-200 rounded-xl focus:border-indigo-500/30 ${genLoading && generating === "cv" ? "opacity-70" : ""}`}
-                        onBlur={async () => {
-                          if (!user || !id || (genLoading && generating === "cv")) return;
-                          await updateApplication(user.uid, id, { generatedCV: editForm.generatedCV });
-                          setApp((a) => a ? { ...a, generatedCV: editForm.generatedCV || "" } : null);
-                        }}
-                      />
-                      <p className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider text-right">
-                        Edits auto-save on blur, or use Save
-                      </p>
+                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                      <div className="space-y-2">
+                        <Textarea
+                          value={editForm.generatedCV || (generating === "cv" ? completion : "") || ""}
+                          onChange={(e) =>
+                            setEditForm((f) => ({ ...f, generatedCV: e.target.value }))
+                          }
+                          readOnly={genLoading && generating === "cv"}
+                          placeholder="Paste or write your CV content here..."
+                          className={`min-h-[300px] sm:min-h-[500px] font-mono text-xs bg-slate-950 border-white/5 text-slate-200 rounded-xl focus:border-indigo-500/30 ${genLoading && generating === "cv" ? "opacity-70" : ""}`}
+                          onBlur={async () => {
+                            if (!user || !id || (genLoading && generating === "cv")) return;
+                            await updateApplication(user.uid, id, { generatedCV: editForm.generatedCV });
+                            setApp((a) => a ? { ...a, generatedCV: editForm.generatedCV || "" } : null);
+                          }}
+                        />
+                        <p className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider text-right">
+                          Edits auto-save on blur, or use Save
+                        </p>
+                      </div>
+                      {cvTextForChat && masterResume && app.jobDescription?.trim() ? (
+                        <DocumentRevisionChat
+                          kind="cv"
+                          currentDocument={cvTextForChat}
+                          masterResumeText={masterResumeText}
+                          jobDescription={app.jobDescription}
+                          role={editForm.role || app.role}
+                          company={editForm.company || app.company}
+                          userProfile={userProfile}
+                          user={user}
+                          hasAIKey={hasAIKey}
+                          onApplyRevision={handleApplyCvRevision}
+                        />
+                      ) : null}
                     </div>
                   ) : generating === "cv" && genLoading ? (
                     <div className="flex flex-col items-center justify-center min-h-[350px]">
@@ -1183,7 +1247,7 @@ export default function ApplicationDetailPage() {
                             className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold"
                           >
                             <Sparkles className="w-4 h-4 mr-1.5" />
-                            AI Tailor Document
+                            {AI_LEXICON.cvGenerate.label}
                           </Button>
                         )}
                         <Button
@@ -1228,86 +1292,104 @@ export default function ApplicationDetailPage() {
                     <CardTitle className="text-xs font-bold uppercase tracking-wider text-white">Cover Letter Segment</CardTitle>
                     <div className="flex flex-wrap gap-2 justify-end">
                       {(app.generatedCoverLetter || editForm.generatedCoverLetter) && (
+                        <ActionTooltip label={AI_LEXICON.suggestions.tooltip}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSuggest("cl")}
+                            disabled={suggestLoading}
+                            className="h-8 w-8 rounded-lg border-white/10 p-0 text-slate-400 hover:bg-white/5 hover:text-white"
+                          >
+                            <MessageSquareText className="h-3.5 w-3.5" />
+                          </Button>
+                        </ActionTooltip>
+                      )}
+                      <ActionTooltip label={AI_LEXICON.clUpload.tooltip}>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleSuggest("cl")}
-                          disabled={suggestLoading}
-                          className="h-8 w-8 p-0 border-white/10 hover:bg-white/5 text-slate-400 hover:text-white rounded-lg"
-                          title="AI Suggestions"
+                          onClick={() => triggerPdfUpload("cl")}
+                          disabled={uploading === "cl"}
+                          className="h-8 gap-1 rounded-lg border-white/10 px-2 text-[10px] font-bold text-slate-400 hover:bg-white/5 hover:text-white"
                         >
-                          <MessageSquareText className="w-3.5 h-3.5" />
+                          {uploading === "cl" ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Upload className="h-3.5 w-3.5" />
+                          )}
+                          <span className="hidden sm:inline">
+                            {getDocumentText("cl") ? "Replace PDF" : "Upload PDF"}
+                          </span>
                         </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => triggerPdfUpload("cl")}
-                        disabled={uploading === "cl"}
-                        className="h-8 px-2 border-white/10 hover:bg-white/5 text-slate-400 hover:text-white rounded-lg text-[10px] font-bold gap-1"
-                        title="Upload or replace cover letter from PDF"
-                      >
-                        {uploading === "cl" ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Upload className="w-3.5 h-3.5" />
-                        )}
-                        <span className="hidden sm:inline">
-                          {getDocumentText("cl") ? "Replace PDF" : "Upload PDF"}
-                        </span>
-                      </Button>
+                      </ActionTooltip>
                       {(app.generatedCoverLetter || editForm.generatedCoverLetter) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSaveDocument("cl")}
-                          disabled={savingDoc === "cl"}
-                          className="h-8 px-2 border-white/10 hover:bg-white/5 text-slate-400 hover:text-white rounded-lg text-[10px] font-bold gap-1"
-                          title="Save cover letter edits"
-                        >
-                          {savingDoc === "cl" ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <Save className="w-3.5 h-3.5" />
-                          )}
-                          <span className="hidden sm:inline">Save</span>
-                        </Button>
+                        <ActionTooltip label={AI_LEXICON.saveDocument.tooltip}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSaveDocument("cl")}
+                            disabled={savingDoc === "cl"}
+                            className="h-8 gap-1 rounded-lg border-white/10 px-2 text-[10px] font-bold text-slate-400 hover:bg-white/5 hover:text-white"
+                          >
+                            {savingDoc === "cl" ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Save className="h-3.5 w-3.5" />
+                            )}
+                            <span className="hidden sm:inline">Save</span>
+                          </Button>
+                        </ActionTooltip>
                       )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleUndoDocument("cl")}
-                        disabled={clUndoStack.length === 0}
-                        className="h-8 px-2 border-white/10 hover:bg-white/5 text-slate-400 hover:text-white rounded-lg text-[10px] font-bold gap-1 disabled:opacity-40"
-                        title="Undo last cover letter change"
-                      >
-                        <Undo2 className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Undo</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCopy("cl")}
-                        disabled={!getDocumentText("cl")}
-                        className="h-8 w-8 p-0 border-white/10 hover:bg-white/5 text-slate-400 hover:text-white rounded-lg"
-                        title="Copy cover letter"
-                      >
-                        {copied === "cl" ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      </Button>
-                      {masterResume && (
+                      <ActionTooltip label={AI_LEXICON.undoDocument.tooltip}>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleRegenerate("cl")}
-                          disabled={genLoading}
-                          className="h-8 w-8 p-0 border-white/10 hover:bg-white/5 text-indigo-400 hover:text-indigo-300 rounded-lg"
+                          onClick={() => handleUndoDocument("cl")}
+                          disabled={clUndoStack.length === 0}
+                          className="h-8 gap-1 rounded-lg border-white/10 px-2 text-[10px] font-bold text-slate-400 hover:bg-white/5 hover:text-white disabled:opacity-40"
                         >
-                          {genLoading && generating === "cl" ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <Sparkles className="w-3.5 h-3.5" />
-                          )}
+                          <Undo2 className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Undo</span>
                         </Button>
+                      </ActionTooltip>
+                      <ActionTooltip label={AI_LEXICON.copyDocument.tooltip}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopy("cl")}
+                          disabled={!getDocumentText("cl")}
+                          className="h-8 w-8 rounded-lg border-white/10 p-0 text-slate-400 hover:bg-white/5 hover:text-white"
+                        >
+                          {copied === "cl" ? <CheckCheck className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                        </Button>
+                      </ActionTooltip>
+                      <ActionTooltip label={AI_LEXICON.exportCoverLetter.tooltip}>
+                        <span>
+                          <CoverLetterExportMenu
+                            markdown={getDocumentText("cl")}
+                            company={editForm.company || app.company || "Company"}
+                            role={editForm.role || app.role || "Role"}
+                            contact={exportContact}
+                            disabled={!getDocumentText("cl")}
+                          />
+                        </span>
+                      </ActionTooltip>
+                      {masterResume && (
+                        <ActionTooltip label={AI_LEXICON.clRegenerate.tooltip}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRegenerate("cl")}
+                            disabled={genLoading}
+                            className="h-8 w-8 rounded-lg border-white/10 p-0 text-indigo-400 hover:bg-white/5 hover:text-indigo-300"
+                          >
+                            {genLoading && generating === "cl" ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Sparkles className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                        </ActionTooltip>
                       )}
                     </div>
                   </div>
@@ -1330,28 +1412,44 @@ export default function ApplicationDetailPage() {
                       <p className="text-sm text-slate-400 font-semibold uppercase tracking-wider">Parsing PDF sections...</p>
                     </div>
                   ) : app.generatedCoverLetter || editForm.generatedCoverLetter || (generating === "cl" && completion) ? (
-                    <div className="space-y-2">
-                      <Textarea
-                        value={editForm.generatedCoverLetter || (generating === "cl" ? completion : "") || ""}
-                        onChange={(e) =>
-                          setEditForm((f) => ({ ...f, generatedCoverLetter: e.target.value }))
-                        }
-                        readOnly={genLoading && generating === "cl"}
-                        placeholder="Paste or write your cover letter here..."
-                        className={`min-h-[300px] sm:min-h-[500px] font-mono text-xs bg-slate-950 border-white/5 text-slate-200 rounded-xl focus:border-indigo-500/30 ${genLoading && generating === "cl" ? "opacity-70" : ""}`}
-                        onBlur={async () => {
-                          if (!user || !id || (genLoading && generating === "cl")) return;
-                          await updateApplication(user.uid, id, {
-                            generatedCoverLetter: editForm.generatedCoverLetter,
-                          });
-                          setApp((a) =>
-                            a ? { ...a, generatedCoverLetter: editForm.generatedCoverLetter || "" } : null
-                          );
-                        }}
-                      />
-                      <p className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider text-right">
-                        Edits auto-save on blur, or use Save
-                      </p>
+                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                      <div className="space-y-2">
+                        <Textarea
+                          value={editForm.generatedCoverLetter || (generating === "cl" ? completion : "") || ""}
+                          onChange={(e) =>
+                            setEditForm((f) => ({ ...f, generatedCoverLetter: e.target.value }))
+                          }
+                          readOnly={genLoading && generating === "cl"}
+                          placeholder="Paste or write your cover letter here..."
+                          className={`min-h-[300px] sm:min-h-[500px] font-mono text-xs bg-slate-950 border-white/5 text-slate-200 rounded-xl focus:border-indigo-500/30 ${genLoading && generating === "cl" ? "opacity-70" : ""}`}
+                          onBlur={async () => {
+                            if (!user || !id || (genLoading && generating === "cl")) return;
+                            await updateApplication(user.uid, id, {
+                              generatedCoverLetter: editForm.generatedCoverLetter,
+                            });
+                            setApp((a) =>
+                              a ? { ...a, generatedCoverLetter: editForm.generatedCoverLetter || "" } : null
+                            );
+                          }}
+                        />
+                        <p className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider text-right">
+                          Edits auto-save on blur, or use Save
+                        </p>
+                      </div>
+                      {clTextForChat && masterResume && app.jobDescription?.trim() ? (
+                        <DocumentRevisionChat
+                          kind="cover_letter"
+                          currentDocument={clTextForChat}
+                          masterResumeText={masterResumeText}
+                          jobDescription={app.jobDescription}
+                          role={editForm.role || app.role}
+                          company={editForm.company || app.company}
+                          userProfile={userProfile}
+                          user={user}
+                          hasAIKey={hasAIKey}
+                          onApplyRevision={handleApplyCoverLetterRevision}
+                        />
+                      ) : null}
                     </div>
                   ) : generating === "cl" && genLoading ? (
                     <div className="flex flex-col items-center justify-center min-h-[350px]">
@@ -1376,7 +1474,7 @@ export default function ApplicationDetailPage() {
                             className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold"
                           >
                             <Sparkles className="w-4 h-4 mr-1.5" />
-                            AI Write Document
+                            {AI_LEXICON.clGenerate.label}
                           </Button>
                         )}
                         <Button
@@ -1625,6 +1723,8 @@ export default function ApplicationDetailPage() {
                                 type="button"
                                 onClick={() => handleLiveSearch(role)}
                                 disabled={liveSearchLoading === role.searchQuery}
+                                title={AI_LEXICON.findSimilar.tooltip}
+                                aria-label={AI_LEXICON.findSimilar.label}
                                 className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-slate-200 disabled:opacity-40"
                               >
                                 {liveSearchLoading === role.searchQuery ? (
@@ -1632,7 +1732,7 @@ export default function ApplicationDetailPage() {
                                 ) : (
                                   <Search className="w-3 h-3" />
                                 )}
-                                Live Search
+                                {AI_LEXICON.findSimilar.label}
                               </button>
                             </div>
                             {liveSearchResults[role.searchQuery]?.length > 0 && (

@@ -22,8 +22,6 @@ interface TargetsStepProps {
   error: string | null;
   onChangeRoles: (roles: string[]) => void;
   onChangeIndustry: (industry: string) => void;
-  onBack: () => void;
-  onContinue: () => void;
 }
 
 export function TargetsStep({
@@ -35,8 +33,6 @@ export function TargetsStep({
   error,
   onChangeRoles,
   onChangeIndustry,
-  onBack,
-  onContinue,
 }: TargetsStepProps) {
   const [roleInput, setRoleInput] = useState("");
 
@@ -50,8 +46,6 @@ export function TargetsStep({
   const removeRole = (role: string) => {
     onChangeRoles(targetRoles.filter((r) => r !== role));
   };
-
-  const canContinue = targetRoles.length > 0 || targetIndustry.trim().length > 0;
 
   return (
     <div className="space-y-6">
@@ -149,20 +143,6 @@ export function TargetsStep({
           {error}
         </p>
       )}
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-        <Button type="button" variant="ghost" onClick={onBack} className="text-slate-400 hover:text-white">
-          Back
-        </Button>
-        <Button
-          type="button"
-          onClick={onContinue}
-          disabled={!canContinue || loading}
-          className="bg-indigo-600 font-bold text-white hover:bg-indigo-500"
-        >
-          {loading ? "Finding matches…" : "Suggest draft roles"}
-        </Button>
-      </div>
     </div>
   );
 }

@@ -63,6 +63,32 @@ export async function POST(req: NextRequest) {
       : undefined;
   const aiApiKey = typeof aiApiKeyRaw === "string" ? aiApiKeyRaw.trim() : "";
 
+  const contactRaw = body.contactProfile;
+  const contactName =
+    contactRaw &&
+    typeof contactRaw === "object" &&
+    typeof (contactRaw as Record<string, unknown>).name === "string"
+      ? ((contactRaw as Record<string, unknown>).name as string).trim()
+      : "";
+  const contactLocation =
+    contactRaw &&
+    typeof contactRaw === "object" &&
+    typeof (contactRaw as Record<string, unknown>).location === "string"
+      ? ((contactRaw as Record<string, unknown>).location as string).trim()
+      : "";
+  const contactPhone =
+    contactRaw &&
+    typeof contactRaw === "object" &&
+    typeof (contactRaw as Record<string, unknown>).phone === "string"
+      ? ((contactRaw as Record<string, unknown>).phone as string).trim()
+      : "";
+  const contactLinkedIn =
+    contactRaw &&
+    typeof contactRaw === "object" &&
+    typeof (contactRaw as Record<string, unknown>).linkedIn === "string"
+      ? ((contactRaw as Record<string, unknown>).linkedIn as string).trim()
+      : "";
+
   if (targetRoles.length === 0 && !targetIndustry) {
     return NextResponse.json(
       { error: "At least one target role or industry is required." },
@@ -120,6 +146,10 @@ export async function POST(req: NextRequest) {
 
     await profileRef.set(
       {
+        ...(contactName ? { name: contactName } : {}),
+        ...(contactLocation ? { location: contactLocation } : {}),
+        ...(contactPhone ? { phone: contactPhone } : {}),
+        ...(contactLinkedIn ? { linkedIn: contactLinkedIn } : {}),
         targetRoles,
         targetIndustry,
         targetRole: targetRoleJoined,

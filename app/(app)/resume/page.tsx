@@ -48,8 +48,10 @@ import { SEED_RESUMES } from "@/lib/seed-resumes";
 import type { MasterResume, UserProfile, ProjectEntry, Application } from "@/lib/types";
 import { STATUS_CONFIG, CATEGORY_CONFIG, getCategoryConfig, type ResumeCategory } from "@/lib/types";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
 import { popUndoSnapshot, pushUndoSnapshot } from "@/lib/undo-stack";
+import { StickyActionBar } from "@/components/StickyActionBar";
 
 const SECTION_LABELS: Record<string, string> = {
   summary: "Professional Summary",
@@ -424,7 +426,7 @@ export default function ResumePage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-5">
+    <div className={cn("mx-auto max-w-7xl space-y-5 p-4 sm:p-6", editData && "pb-24 md:pb-6")}>
       {/* Header — compact */}
       <div className="flex items-center justify-between border-b border-white/5 pb-5">
         <div>
@@ -850,6 +852,27 @@ export default function ResumePage() {
             </div>
           )}
         </div>
+      )}
+
+      {editData && (
+        <StickyActionBar
+          className="md:hidden"
+          hint="Save keeps your master resume changes"
+          primary={
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="h-11 w-full rounded-xl border-none bg-gradient-to-r from-indigo-600 to-purple-600 px-4 text-xs font-bold text-white shadow-lg shadow-indigo-500/10 hover:from-indigo-500 hover:to-purple-500"
+            >
+              {saving ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Save className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Save Changes
+            </Button>
+          }
+        />
       )}
 
       {/* New Resume Dialog */}

@@ -16,3 +16,8 @@ export function buildCvFilename(company: string, role: string, ext: "pdf" | "doc
   const parts = [company.trim(), role.trim(), "CV"].filter(Boolean);
   return `${sanitizeFilename(parts.join("_"))}.${ext}`;
 }
+
+export function buildCoverLetterFilename(company: string, role: string, ext: "pdf" | "docx"): string {
+  const parts = [company.trim(), role.trim(), "Cover_Letter"].filter(Boolean);
+  return `${sanitizeFilename(parts.join("_"))}.${ext}`;
+}

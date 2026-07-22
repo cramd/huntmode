@@ -19,4 +19,6 @@ export const USAGE_FEATURE_LABELS: Record<UsageFeature, string> = {
   "analyze-fit": "Fit analysis",
   "scrape-job": "Job scrape parse",
   "validate-key": "API key validation",
+  "cv-revision-chat": "CV revision chat",
+  "cl-revision-chat": "Cover letter revision chat",
 };

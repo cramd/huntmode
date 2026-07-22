@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCompletion } from "@ai-sdk/react";
-import { sanitizeCvMarkdown } from "@/lib/cv-export/sanitize-cv-markdown";
+import {
+  sanitizeCoverLetterMarkdown,
+  sanitizeCvMarkdown,
+} from "@/lib/cv-export/sanitize-cv-markdown";
 import {
   Link2,
   FileText,
@@ -30,6 +33,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/context/AuthContext";
 import { createApplication, getMasterResumes, logActivity, getUserProfile } from "@/lib/db";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
+import { StickyActionBar } from "@/components/StickyActionBar";
 import { type MasterResume, type UserProfile, getCategoryConfig } from "@/lib/types";
 import { toast } from "sonner";
 import { useEffect } from "react";
@@ -187,7 +191,7 @@ export default function NewApplicationPage() {
     api: "/api/generate",
     streamProtocol: "text",
     onFinish: (_, result) => {
-      update("generatedCoverLetter", result);
+      update("generatedCoverLetter", sanitizeCoverLetterMarkdown(result || ""));
     },
     onError: (e) => setGenError(e.message || "Cover letter generation failed"),
   });
@@ -686,27 +690,31 @@ export default function NewApplicationPage() {
       )}
 
       {/* Navigation */}
-      <div className="fixed bottom-0 inset-x-0 z-30 flex justify-between gap-3 border-t border-white/10 bg-slate-950/95 backdrop-blur-md px-4 py-3 md:static md:border-t md:border-white/5 md:bg-transparent md:backdrop-blur-none md:px-0 md:pt-5 md:pb-0">
-        <Button
-          variant="outline"
-          onClick={() => setStep((s) => (s - 1) as Step)}
-          disabled={step === 1}
-          className="border-white/10 hover:bg-white/5 text-white rounded-xl font-bold px-5 h-11 md:h-9 flex-1 sm:flex-none"
-        >
-          <ChevronLeft className="w-4 h-4 mr-1.5" />
-          Back
-        </Button>
-        {step < 4 ? (
+      <StickyActionBar
+        secondary={
           <Button
-            onClick={() => setStep((s) => (s + 1) as Step)}
-            disabled={!canProceed()}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl px-5 h-11 md:h-9 transition-all flex-1 sm:flex-none"
+            variant="outline"
+            onClick={() => setStep((s) => (s - 1) as Step)}
+            disabled={step === 1}
+            className="h-11 flex-1 rounded-xl border-white/10 px-5 font-bold text-white hover:bg-white/5 md:h-9 sm:flex-none"
           >
-            Continue
-            <ChevronRight className="w-4 h-4 ml-1.5" />
+            <ChevronLeft className="mr-1.5 h-4 w-4" />
+            Back
           </Button>
-        ) : null}
-      </div>
+        }
+        primary={
+          step < 4 ? (
+            <Button
+              onClick={() => setStep((s) => (s + 1) as Step)}
+              disabled={!canProceed()}
+              className="h-11 flex-1 rounded-xl bg-indigo-600 px-5 font-bold text-white transition-all hover:bg-indigo-500 md:h-9 sm:flex-none"
+            >
+              Continue
+              <ChevronRight className="ml-1.5 h-4 w-4" />
+            </Button>
+          ) : null
+        }
+      />
     </div>
   );
 }

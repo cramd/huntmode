@@ -226,7 +226,9 @@ export type UsageFeature =
   | "onboarding-suggest-roles"
   | "analyze-fit"
   | "scrape-job"
-  | "validate-key";
+  | "validate-key"
+  | "cv-revision-chat"
+  | "cl-revision-chat";
 
 export interface UsageEvent {
   id: string;
@@ -245,7 +247,7 @@ export interface UserProfile {
   uid: string;
   name: string;
   email: string;
-  /** Contact details used on exported CVs (shared across applications). */
+  /** Contact details used on exported CVs and cover letters (shared across applications). */
   phone?: string;
   linkedIn?: string;
   location?: string;

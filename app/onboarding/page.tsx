@@ -9,12 +9,35 @@ import { UploadCvStep } from "@/components/onboarding/UploadCvStep";
 import { TargetsStep } from "@/components/onboarding/TargetsStep";
 import { ReviewDraftsStep } from "@/components/onboarding/ReviewDraftsStep";
 import { ApiKeyStep } from "@/components/onboarding/ApiKeyStep";
+import {
+  ContactProfileStep,
+  type ContactProfileFields,
+} from "@/components/onboarding/ContactProfileStep";
 import { HuntModeBrand } from "@/components/HuntModeBrand";
+import { StickyActionBar } from "@/components/StickyActionBar";
+import { Button } from "@/components/ui/button";
+import { Key, Loader2 } from "lucide-react";
 import type { MasterResume, OnboardingDraftSuggestion, UserProfile } from "@/lib/types";
 import type { ParseResumeHints } from "@/lib/parse-resume";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3 | 4 | 5;
+
+const STEP_TITLES: Record<Step, string> = {
+  1: "Upload CV",
+  2: "Target roles",
+  3: "Review drafts",
+  4: "Contact profile",
+  5: "Connect AI key",
+};
+
+const EMPTY_CONTACT: ContactProfileFields = {
+  name: "",
+  email: "",
+  location: "",
+  phone: "",
+  linkedIn: "",
+};
 
 export default function OnboardingPage() {
   const { user, loading, accessStatus } = useAuth();
@@ -34,6 +57,8 @@ export default function OnboardingPage() {
   const [suggestError, setSuggestError] = useState<string | null>(null);
 
   const [drafts, setDrafts] = useState<OnboardingDraftSuggestion[]>([]);
+
+  const [contactProfile, setContactProfile] = useState<ContactProfileFields>(EMPTY_CONTACT);
 
   const [aiProvider, setAiProvider] = useState<NonNullable<UserProfile["aiProvider"]>>("google");
   const [aiApiKey, setAiApiKey] = useState("");
@@ -79,6 +104,13 @@ export default function OnboardingPage() {
           );
         }
         if (profile?.targetIndustry) setTargetIndustry(profile.targetIndustry);
+        setContactProfile({
+          name: profile?.name || user.displayName || "",
+          email: profile?.email || user.email || "",
+          location: profile?.location || "",
+          phone: profile?.phone || "",
+          linkedIn: profile?.linkedIn || "",
+        });
         if (profile?.aiProvider) setAiProvider(profile.aiProvider);
         if (profile?.aiApiKey) {
           setAiApiKey(profile.aiApiKey);
@@ -172,6 +204,7 @@ export default function OnboardingPage() {
           targetRoles,
           targetIndustry,
           drafts,
+          contactProfile,
           aiProvider: trimmedKey && !options?.skippedApiKey ? aiProvider : undefined,
           aiApiKey: trimmedKey && !options?.skippedApiKey ? trimmedKey : undefined,
         }),
@@ -203,8 +236,12 @@ export default function OnboardingPage() {
 
   if (!user) return null;
 
+  const canContinueTargets =
+    targetRoles.length > 0 || targetIndustry.trim().length > 0;
+  const canFinishWithKey = !aiApiKey.trim() || keyValidated;
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-slate-950 pb-24 text-slate-100 selection:bg-indigo-500/30 md:pb-10">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] h-[40%] w-[40%] rounded-full bg-indigo-500/10 blur-[120px]" />
         <div className="absolute bottom-[-10%] right-[-10%] h-[40%] w-[40%] rounded-full bg-purple-500/5 blur-[120px]" />
@@ -215,14 +252,14 @@ export default function OnboardingPage() {
           <HuntModeBrand variant="inline" className="items-start sm:items-center" />
           <div className="text-left sm:text-right">
             <p className="text-xs font-bold uppercase tracking-widest text-indigo-400/80">
-              Setup · Step {step} of 4
+              Setup · Step {step} of 5 · {STEP_TITLES[step]}
             </p>
             <p className="text-lg font-bold text-white">Welcome aboard</p>
           </div>
         </div>
 
         <div className="mb-8 flex gap-2">
-          {[1, 2, 3, 4].map((s) => (
+          {[1, 2, 3, 4, 5].map((s) => (
             <div
               key={s}
               className={`h-1 flex-1 rounded-full transition-colors ${
@@ -234,8 +271,9 @@ export default function OnboardingPage() {
 
         {step <= 3 && (
           <p className="mb-6 rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-4 py-3 text-xs leading-relaxed text-indigo-200/90">
-            Steps 1–3 use HuntMode&apos;s server AI to parse your CV and suggest starter roles. Step 4
-            connects your own key for tailoring, fit scores, and interview prep inside the app.
+            Steps 1–3 use HuntMode&apos;s server AI to parse your CV and suggest starter roles. Steps
+            4–5 set your export contact profile and connect your own key for tailoring, fit scores,
+            and interview prep.
           </p>
         )}
 
@@ -245,8 +283,6 @@ export default function OnboardingPage() {
             parsing={parsing}
             error={parseError}
             onParse={handleParse}
-            onSkip={() => setStep(2)}
-            onContinue={() => setStep(2)}
           />
         )}
 
@@ -260,8 +296,6 @@ export default function OnboardingPage() {
             error={suggestError}
             onChangeRoles={setTargetRoles}
             onChangeIndustry={setTargetIndustry}
-            onBack={() => setStep(1)}
-            onContinue={handleSuggest}
           />
         )}
 
@@ -277,15 +311,17 @@ export default function OnboardingPage() {
             onRemoveDraft={(index) => {
               setDrafts((prev) => prev.filter((_, i) => i !== index));
             }}
-            onBack={() => setStep(2)}
-            onContinue={() => {
-              setCompleteError(null);
-              setStep(4);
-            }}
           />
         )}
 
         {step === 4 && (
+          <ContactProfileStep
+            contact={contactProfile}
+            onChange={(patch) => setContactProfile((prev) => ({ ...prev, ...patch }))}
+          />
+        )}
+
+        {step === 5 && (
           <ApiKeyStep
             aiProvider={aiProvider}
             aiApiKey={aiApiKey}
@@ -301,9 +337,171 @@ export default function OnboardingPage() {
               setKeyValidated(false);
             }}
             onKeyValidated={() => setKeyValidated(true)}
-            onBack={() => setStep(3)}
-            onSkip={() => handleComplete({ skippedApiKey: true })}
-            onComplete={() => handleComplete()}
+          />
+        )}
+
+        {step === 1 && (
+          <StickyActionBar
+            hint="Next: pick target roles"
+            secondary={
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setStep(2)}
+                disabled={parsing}
+                className="text-slate-400 hover:text-white"
+              >
+                Skip for now
+              </Button>
+            }
+            primary={
+              <Button
+                type="button"
+                onClick={() => setStep(2)}
+                disabled={parsing}
+                className="bg-indigo-600 font-bold text-white hover:bg-indigo-500"
+              >
+                {sections ? "Continue to target roles" : "Continue without CV"}
+              </Button>
+            }
+          />
+        )}
+
+        {step === 2 && (
+          <StickyActionBar
+            hint="Next: review starter draft roles"
+            secondary={
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setStep(1)}
+                className="text-slate-400 hover:text-white"
+              >
+                Back
+              </Button>
+            }
+            primary={
+              <Button
+                type="button"
+                onClick={handleSuggest}
+                disabled={!canContinueTargets || suggestLoading}
+                className="bg-indigo-600 font-bold text-white hover:bg-indigo-500"
+              >
+                {suggestLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Finding matches…
+                  </>
+                ) : (
+                  "Continue to review drafts"
+                )}
+              </Button>
+            }
+          />
+        )}
+
+        {step === 3 && (
+          <StickyActionBar
+            hint="Next: add your export contact profile · drafts save when you finish setup"
+            secondary={
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setStep(2)}
+                className="text-slate-400 hover:text-white"
+              >
+                Back
+              </Button>
+            }
+            primary={
+              <Button
+                type="button"
+                onClick={() => {
+                  setCompleteError(null);
+                  setStep(4);
+                }}
+                disabled={drafts.length === 0}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 font-bold text-white hover:from-indigo-500 hover:to-purple-500"
+              >
+                Continue to contact profile
+              </Button>
+            }
+          />
+        )}
+
+        {step === 4 && (
+          <StickyActionBar
+            hint="Next: connect your AI key · profile saves when you finish setup"
+            secondary={
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setStep(3)}
+                className="text-slate-400 hover:text-white"
+              >
+                Back
+              </Button>
+            }
+            primary={
+              <Button
+                type="button"
+                onClick={() => {
+                  setCompleteError(null);
+                  setStep(5);
+                }}
+                className="bg-indigo-600 font-bold text-white hover:bg-indigo-500"
+              >
+                Continue to AI key setup
+              </Button>
+            }
+          />
+        )}
+
+        {step === 5 && (
+          <StickyActionBar
+            hint="Finish to save your Master Resume, contact profile, and draft applications"
+            secondary={
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setStep(4)}
+                disabled={completing}
+                className="text-slate-400 hover:text-white"
+              >
+                Back
+              </Button>
+            }
+            primary={
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => handleComplete({ skippedApiKey: true })}
+                  disabled={completing}
+                  className="text-slate-400 hover:text-white"
+                >
+                  Skip for now
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => handleComplete()}
+                  disabled={completing || !canFinishWithKey}
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 font-bold text-white hover:from-indigo-500 hover:to-purple-500"
+                >
+                  {completing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Setting up your hunt…
+                    </>
+                  ) : (
+                    <>
+                      <Key className="mr-2 h-4 w-4" />
+                      {aiApiKey.trim() ? "Save key & start hunting" : "Start hunting"}
+                    </>
+                  )}
+                </Button>
+              </>
+            }
           />
         )}
       </div>
