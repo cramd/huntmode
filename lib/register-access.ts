@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { adminDb } from "@/lib/firebase-admin";
 import { checkSignupRateLimit } from "@/lib/signup-rate-limit";
+import { accessGateEnabled } from "@/lib/edition";
 import type { AccessRequestStatus } from "@/lib/types";
 
 export type RegisterAccessInput = {
@@ -36,7 +37,7 @@ export async function registerAccessUser(
     }
   }
 
-  const rateLimit = await checkSignupRateLimit();
+  const rateLimit = accessGateEnabled() ? await checkSignupRateLimit() : { allowed: true as const, count: 0, limit: 0 };
   if (!rateLimit.allowed) {
     return {
       ok: false,

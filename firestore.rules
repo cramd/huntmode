@@ -2,9 +2,8 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper to check if the user is approved to use the application.
-    // Marc Sherwood (marcsherwood@gmail.com) is automatically approved if email is verified.
-    // Other users are approved if they have an approved entry in the accessRequests collection.
+    // Admin email must match ADMIN_EMAIL in your server env (see docs/firestore-rules-core.md).
+    // Hosted production (huntmode.ca) uses marcsherwood@gmail.com; self-hosters replace both places.
     function isApproved(uid) {
       return request.auth != null && (
         (request.auth.token.email == 'marcsherwood@gmail.com' && request.auth.token.email_verified == true) ||

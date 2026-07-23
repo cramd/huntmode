@@ -362,8 +362,7 @@ export default function ApplicationDetailPage() {
       toast.error("No job description saved for this application.");
       return;
     }
-    const isMarc = user?.email === "marcsherwood@gmail.com";
-    if (!isMarc && !userProfile?.aiApiKey) {
+    if (!userHasAiApiKey(user?.email, userProfile)) {
       toast.error("No AI API key set. Go to Settings and add your key.");
       return;
     }
@@ -405,8 +404,7 @@ export default function ApplicationDetailPage() {
   };
 
   const handlePdfUpload = async (file: File, target: "cv" | "cl") => {
-    const isMarc = user?.email === "marcsherwood@gmail.com";
-    if (!user || !id || (!isMarc && !userProfile?.aiApiKey)) {
+    if (!user || !id || !userHasAiApiKey(user?.email, userProfile)) {
       toast.error("No AI API key set. Go to Settings and add your key.");
       return;
     }
@@ -461,8 +459,7 @@ export default function ApplicationDetailPage() {
   };
 
   const handleSuggest = async (target: "cv" | "cl") => {
-    const isMarc = user?.email === "marcsherwood@gmail.com";
-    if (!app || (!isMarc && !userProfile?.aiApiKey)) {
+    if (!app || !userHasAiApiKey(user?.email, userProfile)) {
       toast.error("No AI API key set. Go to Settings.");
       return;
     }
@@ -508,7 +505,6 @@ export default function ApplicationDetailPage() {
   };
 
   const handleAnalyzeFit = async () => {
-    const isMarc = user?.email === "marcsherwood@gmail.com";
     if (!app || !masterResume) {
       toast.error("Load a resume first — open application settings to select one.");
       return;
@@ -517,7 +513,7 @@ export default function ApplicationDetailPage() {
       toast.error("No job description to analyze against.");
       return;
     }
-    if (!isMarc && !userProfile?.aiApiKey) {
+    if (!userHasAiApiKey(user?.email, userProfile)) {
       toast.error("No AI API key set. Go to Settings.");
       return;
     }
@@ -606,7 +602,6 @@ export default function ApplicationDetailPage() {
   };
 
   const handleIncorporateFitCard = async (cardKey: FitInsightCardType) => {
-    const isMarc = user?.email === "marcsherwood@gmail.com";
     if (!app || !user || !id) return;
 
     const currentCV = (editForm.generatedCV || app.generatedCV || "").trim();
@@ -622,7 +617,7 @@ export default function ApplicationDetailPage() {
       toast.error("No job description saved for this application.");
       return;
     }
-    if (!isMarc && !userProfile?.aiApiKey) {
+    if (!userHasAiApiKey(user?.email, userProfile)) {
       toast.error("No AI API key set. Go to Settings and add your key.");
       return;
     }

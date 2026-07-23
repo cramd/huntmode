@@ -240,6 +240,7 @@ export interface UsageEvent {
   outputTokens: number;
   totalTokens: number;
   estimatedCostUsd: number;
+  billedTo?: "user" | "platform";
   applicationId?: string;
 }
 

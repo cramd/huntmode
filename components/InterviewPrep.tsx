@@ -43,6 +43,7 @@ import InterviewChat from "@/components/InterviewChat";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
+import { userHasAiApiKey } from "@/lib/has-ai-key";
 
 interface InterviewPrepProps {
   application: Application;
@@ -650,7 +651,7 @@ export default function InterviewPrep({ application, onUpdate, userProfile, mast
   // Prompter sizing values
   const scriptFontSize = `${(zoomLevel / 100) * 1.05}rem`;
   const sidebarFontSize = `${(zoomLevel / 100) * 0.9}rem`;
-  const hasAIKey = user?.email === "marcsherwood@gmail.com" || !!userProfile?.aiApiKey;
+  const hasAIKey = userHasAiApiKey(user?.email, userProfile);
 
   return (
     <div className={`text-slate-100 select-none transition-all duration-300 ${focusMode ? 'fixed inset-0 z-[100] p-4 sm:p-8 md:p-12 bg-slate-950/95 backdrop-blur-3xl overflow-y-auto' : ''}`}>

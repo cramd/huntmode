@@ -9,6 +9,7 @@ import { createChatStreamResponseWithFallback, formatAIError } from "@/lib/ai";
 import type { AIProvider } from "@/lib/ai";
 import { adminAuth } from "@/lib/firebase-admin";
 import { trackTokenUsage } from "@/lib/cost-tracker";
+import { checkUserAiAccess } from "@/lib/platform-ai";
 import type { UsageFeature } from "@/lib/types";
 
 const requestSchema = z.object({
@@ -86,15 +87,18 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const isMarc = userEmail === "marcsherwood@gmail.com";
-  if (!isMarc && (!data.apiKey || !data.apiKey.trim())) {
-    return new Response(
-      JSON.stringify({
-        error: "No AI API key provided. Please configure your own AI key in Settings.",
-      }),
-      { status: 400, headers: { "Content-Type": "application/json" } }
-    );
+  const access = checkUserAiAccess({
+    email: userEmail,
+    userApiKey: data.apiKey,
+    feature: usageFeatureFor(documentType),
+  });
+  if (!access.ok) {
+    return new Response(JSON.stringify({ error: access.error }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   }
+  const activeApiKey = access.apiKey;
 
   const activeProvider = (data.provider as AIProvider) || "openai";
   const system = buildDocumentRevisionSystemPrompt(
@@ -114,7 +118,7 @@ export async function POST(req: NextRequest) {
 
     return createChatStreamResponseWithFallback({
       provider: activeProvider,
-      apiKey: data.apiKey,
+      apiKey: activeApiKey,
       system,
       messages: modelMessages,
       originalMessages: data.messages,

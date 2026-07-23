@@ -13,6 +13,7 @@ import { userHasAiApiKey } from "@/lib/has-ai-key";
 import Sidebar from "@/components/Sidebar";
 import { HuntModeBrand } from "@/components/HuntModeBrand";
 import { ApiKeyBanner } from "@/components/ApiKeyBanner";
+import { ExtensionImportBanner } from "@/components/ExtensionImportBanner";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -281,6 +282,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           )}
         >
           {!userHasAiApiKey(user.email, userProfile) && <ApiKeyBanner />}
+          <ExtensionImportBanner userProfile={userProfile} />
           {children}
         </main>
 

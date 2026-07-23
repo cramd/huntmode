@@ -36,6 +36,7 @@ import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
 import { StickyActionBar } from "@/components/StickyActionBar";
 import { type MasterResume, type UserProfile, getCategoryConfig } from "@/lib/types";
 import { toast } from "sonner";
+import { userHasAiApiKey } from "@/lib/has-ai-key";
 import { useEffect } from "react";
 import { WorkdayFetchNotice } from "@/components/WorkdayFetchNotice";
 import { isWorkdayJobUrl } from "@/lib/job-url";
@@ -222,8 +223,7 @@ export default function NewApplicationPage() {
     if (!masterResume.trim()) {
       return toast.error("Your resume has no content. Fill in sections in My Resume first.");
     }
-    const isMarc = user?.email === "marcsherwood@gmail.com";
-    if (!isMarc && !userProfile?.aiApiKey) {
+    if (!userHasAiApiKey(user?.email, userProfile)) {
       return toast.error("No AI API key set. Go to Settings and add your API key.");
     }
 

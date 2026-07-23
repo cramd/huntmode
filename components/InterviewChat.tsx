@@ -50,6 +50,7 @@ import type {
   UserProfile,
 } from "@/lib/types";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
+import { isAdminEmail } from "@/lib/is-admin";
 
 interface InterviewChatProps {
   application: Application;
@@ -241,7 +242,7 @@ export default function InterviewChat({
       toast.error("Configure your AI API key in Settings first.");
       return;
     }
-    if (sessionsThisMonth >= FREE_SESSIONS_PER_MONTH && user?.email !== "marcsherwood@gmail.com") {
+    if (sessionsThisMonth >= FREE_SESSIONS_PER_MONTH && !isAdminEmail(user?.email)) {
       toast.error(`Free plan includes ${FREE_SESSIONS_PER_MONTH} practice sessions per month.`);
       return;
     }

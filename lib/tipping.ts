@@ -1,4 +1,5 @@
 import type { ApplicationStatus } from "@/lib/types";
+import { tippingUiEnabled } from "@/lib/edition";
 
 /** Statuses that mean the hunt is heating up — celebrate + soft tip ask. */
 export type TipMilestoneStatus = "phone_screen" | "interview" | "offer";
@@ -32,7 +33,7 @@ export function getTipUrl(): string | null {
 }
 
 export function isTippingEnabled(): boolean {
-  return Boolean(getTipUrl());
+  return tippingUiEnabled() && Boolean(getTipUrl());
 }
 
 export type TipMilestoneCopy = {

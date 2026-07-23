@@ -5,6 +5,7 @@ import type { AIProvider } from "@/lib/ai";
 import { generateText } from "ai";
 import type { FitScore } from "@/lib/types";
 import { trackTokenUsage } from "@/lib/cost-tracker";
+import { checkUserAiAccess } from "@/lib/platform-ai";
 
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
@@ -46,13 +47,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const isMarc = userEmail === "marcsherwood@gmail.com";
-  if (!isMarc && (!apiKey || !apiKey.trim())) {
-    return NextResponse.json(
-      { error: "No AI API key provided. Add your key in Settings." },
-      { status: 400 }
-    );
+  const access = checkUserAiAccess({
+    email: userEmail,
+    userApiKey: apiKey,
+    feature: "analyze-fit",
+  });
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error }, { status: 400 });
   }
+  const activeApiKey = access.apiKey;
 
   try {
     const activeProvider = (provider as AIProvider) || "openai";
@@ -63,7 +66,7 @@ export async function POST(req: NextRequest) {
       company: company || "the company",
     });
 
-    const { result, modelId } = await withModelFallback(activeProvider, apiKey, (model) =>
+    const { result, modelId } = await withModelFallback(activeProvider, activeApiKey, (model) =>
       generateText({
         model,
         prompt,

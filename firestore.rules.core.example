@@ -1,0 +1,51 @@
+rules_version = '2';
+
+// Self-host template — replace YOUR_ADMIN_EMAIL with the same value as ADMIN_EMAIL in .env.local
+// before deploying: npx firebase-tools deploy --only firestore:rules
+// See docs/firestore-rules-core.md
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isApproved(uid) {
+      return request.auth != null && (
+        (request.auth.token.email == 'YOUR_ADMIN_EMAIL' && request.auth.token.email_verified == true) ||
+        (exists(/databases/$(database)/documents/accessRequests/$(uid)) &&
+         get(/databases/$(database)/documents/accessRequests/$(uid)).data.status == 'approved')
+      );
+    }
+
+    function isAdmin() {
+      return request.auth != null &&
+        request.auth.token.email == 'YOUR_ADMIN_EMAIL' &&
+        request.auth.token.email_verified == true;
+    }
+
+    match /accessRequests/{uid} {
+      allow read, write: if isAdmin();
+    }
+
+    match /users/{uid}/profile/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid && isApproved(uid);
+    }
+    match /users/{uid}/applications/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid && isApproved(uid);
+    }
+    match /users/{uid}/masterResumes/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid && isApproved(uid);
+    }
+    match /users/{uid}/goals/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid && isApproved(uid);
+    }
+    match /users/{uid}/activity/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid && isApproved(uid);
+    }
+    match /users/{uid}/usageEvents/{eventId} {
+      allow read: if request.auth != null && request.auth.uid == uid && isApproved(uid);
+      allow write: if false;
+    }
+
+    match /system/{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

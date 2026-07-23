@@ -32,7 +32,13 @@ export default function LandingPage() {
       }
     }
     if (!loading && user) {
-      router.replace("/dashboard");
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirect = searchParams.get("redirect");
+      if (redirect && redirect.startsWith("/")) {
+        router.replace(redirect);
+      } else {
+        router.replace("/dashboard");
+      }
     }
   }, [user, loading, router]);
 

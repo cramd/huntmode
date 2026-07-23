@@ -24,6 +24,7 @@ import { AdminAccessRequests } from "@/components/AdminAccessRequests";
 import { AdminSignupStats } from "@/components/AdminSignupStats";
 import { RecentAiUsage } from "@/components/RecentAiUsage";
 import { TipThanksButton } from "@/components/TipThanksButton";
+import { AnalyticsPromptCard } from "@/components/AnalyticsPromptCard";
 import { isTippingEnabled } from "@/lib/tipping";
 
 export default function SettingsPage() {
@@ -119,6 +120,8 @@ export default function SettingsPage() {
           <AdminAccessRequests />
         </>
       )}
+
+      <AnalyticsPromptCard />
 
       <RecentAiUsage />
 

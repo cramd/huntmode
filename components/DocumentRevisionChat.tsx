@@ -140,7 +140,7 @@ export default function DocumentRevisionChat({
   const handleSend = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || isStreaming) return;
-    if (!hasAIKey && user?.email !== "marcsherwood@gmail.com") {
+    if (!hasAIKey) {
       toast.error("Configure your AI API key in Settings first.");
       return;
     }

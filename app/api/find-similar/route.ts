@@ -9,6 +9,10 @@ import {
 import { searchJobsWithJina } from "@/lib/jina-search";
 import { parseCompanyRoleFromTitle } from "@/lib/application-dedupe";
 import { trackTokenUsage } from "@/lib/cost-tracker";
+import {
+  resolveFindSimilarGoogleKey,
+  userHasFindSimilarAccess,
+} from "@/lib/platform-ai";
 
 export const runtime = "nodejs";
 
@@ -93,7 +97,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const isMarc = userEmail === "marcsherwood@gmail.com";
   let activeApiKey = typeof apiKey === "string" ? apiKey.trim() : "";
 
   if (!activeApiKey) {
@@ -104,14 +107,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (!isMarc && !activeApiKey && !process.env.GOOGLE_AI_API_KEY?.trim()) {
+  if (!userHasFindSimilarAccess({ email: userEmail, userApiKey: activeApiKey })) {
     return NextResponse.json(
       { error: "No AI API key configured. Add your Gemini key in Settings." },
       { status: 400 }
     );
   }
 
-  const googleApiKey = activeApiKey || process.env.GOOGLE_AI_API_KEY;
+  const googleApiKey = resolveFindSimilarGoogleKey({
+    email: userEmail,
+    userApiKey: activeApiKey,
+  });
 
   try {
     const prompt = buildFindSimilarSearchPrompt({

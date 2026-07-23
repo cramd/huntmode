@@ -2,6 +2,27 @@
 
 Your ADHD-friendly job search command center. Track applications, generate AI-tailored CVs and cover letters, and stay motivated with goals and streak tracking.
 
+## Editions
+
+This repository has two long-lived branches:
+
+- **`main`** — hosted production at [huntmode.ca](https://huntmode.ca). Deploy with `./deploy.sh` (local build + PM2 on the production server).
+- **`core`** — self-host / OSS line with open sign-up and BYOK-only in-app AI.
+
+See [docs/EDITIONS.md](docs/EDITIONS.md) for merge workflow, feature split, and env flags.
+
+**On `main` (hosted):** copy `.env.example` with `HUNTMODE_EDITION=hosted`, set `ADMIN_EMAIL`, Firebase, and optional PostHog / tip URL. Production deploy:
+
+```bash
+./deploy.sh
+```
+
+**Self-hosting:** check out the `core` branch and follow the Docker or bare-metal sections below.
+
+### Chrome extension
+
+The [`extension/`](extension/) folder contains a Manifest V3 browser extension for huntmode.ca. Load it unpacked in Chrome to save job URLs from any page and import them as draft applications. See [extension/README.md](extension/README.md).
+
 ## Features
 
 - **AI Document Generation** — Paste a job URL, and get a tailored CV and cover letter in seconds (OpenAI GPT-4o or Claude)
@@ -37,14 +58,14 @@ cp .env.example .env.local
 
 Fill in all the required variables inside `.env.local`. Note that `RESEND_API_KEY` is optional; if left blank, admin login approval URLs will print directly to the server logs for easy local testing.
 
-Optional PostHog analytics (client-side):
+Optional PostHog analytics (client-side, encouraged on hosted but not required):
 
 ```env
 NEXT_PUBLIC_POSTHOG_KEY=phc_your_project_token
 NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
 ```
 
-Optional tipping (“Say thanks”) — Buy Me a Coffee, Ko-fi, Stripe Payment Link, etc.:
+Optional tipping (“Say thanks”) — hosted only; Buy Me a Coffee, Ko-fi, Stripe Payment Link, etc.:
 
 ```env
 NEXT_PUBLIC_TIP_URL=https://buymeacoffee.com/yourpage
@@ -122,14 +143,15 @@ services:
 
 ### Option B: Bare-Metal VPS (PM2 & Nginx)
 
-If deploying to a VPS without Docker, you can configure local build syncing to avoid CPU/RAM overhead on small server hardware (built on top of your local Mac/PC):
+**Hosted production (`main` branch only):** configure `deploy.sh` with your server credentials, then:
 
-1. Configure your local `deploy.sh` script with your server IP and directory credentials.
-2. Run the deployment script to compile locally and sync the production-ready build:
-   ```bash
-   ./deploy.sh
-   ```
-This installs dependencies and automatically starts/restarts the process under `pm2`.
+```bash
+./deploy.sh
+```
+
+This builds locally, rsyncs to the server, runs `npm install --omit=dev`, and restarts PM2 (`huntmode`).
+
+For other VPS deployments without the HuntMode production script:
 
 ## Stack
 

@@ -6,6 +6,7 @@ import { withModelFallback, formatAIError } from "@/lib/ai";
 import type { AIProvider } from "@/lib/ai";
 import { adminAuth } from "@/lib/firebase-admin";
 import { trackTokenUsage } from "@/lib/cost-tracker";
+import { checkUserAiAccess } from "@/lib/platform-ai";
 import type { InterviewChatMode } from "@/lib/types";
 
 const debriefSchema = z.object({
@@ -62,13 +63,18 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const isMarc = userEmail === "marcsherwood@gmail.com";
-  if (!isMarc && (!apiKey || !apiKey.trim())) {
-    return new Response(
-      JSON.stringify({ error: "No AI API key provided. Please configure your own AI key in Settings." }),
-      { status: 400, headers: { "Content-Type": "application/json" } }
-    );
+  const access = checkUserAiAccess({
+    email: userEmail,
+    userApiKey: apiKey,
+    feature: "interview-debrief",
+  });
+  if (!access.ok) {
+    return new Response(JSON.stringify({ error: access.error }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   }
+  const activeApiKey = access.apiKey;
 
   if (!transcript?.trim() || !jobDescription?.trim()) {
     return new Response(
@@ -87,7 +93,7 @@ export async function POST(req: NextRequest) {
   });
 
   try {
-    const { result, modelId } = await withModelFallback(activeProvider, apiKey, (model) =>
+    const { result, modelId } = await withModelFallback(activeProvider, activeApiKey, (model) =>
       generateObject({
         model,
         prompt,

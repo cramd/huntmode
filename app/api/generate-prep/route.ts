@@ -5,6 +5,7 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { adminAuth } from "@/lib/firebase-admin";
 import { trackTokenUsage } from "@/lib/cost-tracker";
+import { checkUserAiAccess } from "@/lib/platform-ai";
 
 const prepSchema = z.object({
   sections: z.array(
@@ -52,13 +53,18 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const isMarc = userEmail === "marcsherwood@gmail.com";
-  if (!isMarc && (!apiKey || !apiKey.trim())) {
-    return new Response(
-      JSON.stringify({ error: "No AI API key provided. Please configure your own AI key in Settings." }),
-      { status: 400, headers: { "Content-Type": "application/json" } }
-    );
+  const access = checkUserAiAccess({
+    email: userEmail,
+    userApiKey: apiKey,
+    feature: "generate-prep",
+  });
+  if (!access.ok) {
+    return new Response(JSON.stringify({ error: access.error }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   }
+  const activeApiKey = access.apiKey;
 
   if (!jobDescription || !jobDescription.trim()) {
     return new Response(
@@ -87,7 +93,7 @@ export async function POST(req: NextRequest) {
     });
 
     console.log(`[generate-prep] Prompt length: ${prompt.length}. Calling generateObject...`);
-    const { result, modelId } = await withModelFallback(activeProvider, apiKey, (fallbackModel) =>
+    const { result, modelId } = await withModelFallback(activeProvider, activeApiKey, (fallbackModel) =>
       generateObject({
         model: fallbackModel,
         prompt,

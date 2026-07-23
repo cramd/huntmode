@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
+import { getAdminEmail } from "@/lib/is-admin";
 import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
@@ -188,7 +189,7 @@ export async function POST(req: NextRequest) {
 
     // 5. Send alert email if RESEND_API_KEY is configured
     const resendApiKey = process.env.RESEND_API_KEY;
-    const adminEmail = process.env.ADMIN_EMAIL || "marcsherwood@gmail.com";
+    const adminEmail = getAdminEmail();
     const resendFrom = process.env.RESEND_FROM || "HuntMode <noreply@signup.fuzzynacho.org>";
 
     if (resendApiKey) {

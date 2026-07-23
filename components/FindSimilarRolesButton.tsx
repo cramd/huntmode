@@ -6,6 +6,10 @@ import { Sparkles, Loader2, ExternalLink, Plus, Check } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { createApplication } from "@/lib/db";
 import { findMatchingApplication } from "@/lib/application-dedupe";
+import {
+  buildDraftApplicationData,
+  fetchScrapeForDraft,
+} from "@/lib/create-draft-from-url";
 import type { Application, UserProfile } from "@/lib/types";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
 import {
@@ -112,72 +116,41 @@ export function FindSimilarRolesButton({
     setAddingUrl(result.url);
     try {
       const token = await user.getIdToken();
-      let jobDescription = result.snippet || "";
-      let location: string | undefined;
-      let salaryRange: string | undefined;
-      let remote: boolean | undefined;
-
-      const scrapeRes = await fetch("/api/scrape-job", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
+      const scrape = await fetchScrapeForDraft({
+        token,
+        userProfile,
+        input: {
           url: result.url,
-          provider: userProfile?.aiProvider || "google",
-          apiKey: userProfile?.aiApiKey || undefined,
-        }),
+          fallbackDescription: result.snippet || "",
+          notes: `Found via similar search from ${sourceApplication.company} — ${sourceApplication.role}`,
+          resumeUsed: sourceApplication.resumeUsed || null,
+        },
       });
-      const scrapeData = await scrapeRes.json();
-      if (isWorkdayJobUrl(result.url) && !scrapeRes.ok) {
+      if (isWorkdayJobUrl(result.url) && !scrape) {
         toast.info("Workday fetch can be slow — draft saved with search snippet.", {
           description: "Open the posting and paste the full description to enrich this draft.",
         });
       }
-      if (scrapeRes.ok && scrapeData.text) {
-        jobDescription = scrapeData.text;
-        if (scrapeData.company) company = scrapeData.company;
-        if (scrapeData.role) role = scrapeData.role;
-        if (scrapeData.location) location = scrapeData.location;
-        if (scrapeData.salaryRange) salaryRange = scrapeData.salaryRange;
-        if (scrapeData.remote !== undefined) remote = scrapeData.remote;
-      }
+      const draftData = buildDraftApplicationData(
+        {
+          url: result.url,
+          fallbackDescription: result.snippet || "",
+          notes: `Found via similar search from ${sourceApplication.company} — ${sourceApplication.role}`,
+          resumeUsed: sourceApplication.resumeUsed || null,
+        },
+        scrape
+      );
+      company = draftData.company;
+      role = draftData.role;
 
-      const id = await createApplication(user.uid, {
-        company,
-        role,
-        jobUrl: result.url,
-        jobDescription,
-        status: "draft",
-        appliedAt: null,
-        notes: `Found via similar search from ${sourceApplication.company} — ${sourceApplication.role}`,
-        generatedCV: "",
-        generatedCoverLetter: "",
-        resumeUsed: sourceApplication.resumeUsed || null,
-        ...(location ? { location } : {}),
-        ...(salaryRange ? { salaryRange } : {}),
-        ...(remote !== undefined ? { remote } : {}),
-      });
+      const id = await createApplication(user.uid, draftData);
 
       const newApp: Application = {
         id,
         uid: user.uid,
-        company,
-        role,
-        jobUrl: result.url,
-        jobDescription,
-        status: "draft",
-        appliedAt: null,
-        notes: `Found via similar search from ${sourceApplication.company} — ${sourceApplication.role}`,
-        generatedCV: "",
-        generatedCoverLetter: "",
-        resumeUsed: sourceApplication.resumeUsed || null,
+        ...draftData,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        ...(location ? { location } : {}),
-        ...(salaryRange ? { salaryRange } : {}),
-        ...(remote !== undefined ? { remote } : {}),
       };
 
       setLocalApps((prev) => [newApp, ...prev]);
@@ -188,9 +161,8 @@ export function FindSimilarRolesButton({
         company,
         source: "similar_roles",
       });
-      if (scrapeRes.ok && scrapeData.text) {
-        const sourceLabel =
-          scrapeData.source === "workday" ? " (from Workday)" : "";
+      if (scrape) {
+        const sourceLabel = scrape.source === "workday" ? " (from Workday)" : "";
         toast.success(`Draft added: ${role} at ${company}${sourceLabel}`);
       } else {
         toast.success(`Draft added: ${role} at ${company}`, {

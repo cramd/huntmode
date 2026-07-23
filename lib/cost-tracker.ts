@@ -6,6 +6,7 @@ export type TrackUsageMetadata = {
   feature: UsageFeature;
   modelId?: string;
   applicationId?: string;
+  billedTo?: "user" | "platform";
 };
 
 type ModelRates = { inputPer1M: number; outputPer1M: number };
@@ -71,6 +72,7 @@ export async function trackTokenUsage(
     outputTokens,
     totalTokens,
     estimatedCostUsd: costUsd,
+    ...(metadata.billedTo ? { billedTo: metadata.billedTo } : {}),
     ...(metadata.applicationId ? { applicationId: metadata.applicationId } : {}),
   };
 

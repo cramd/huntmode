@@ -52,6 +52,7 @@ import { cn } from "@/lib/utils";
 import { AnalyticsEvents, captureEvent } from "@/lib/analytics";
 import { popUndoSnapshot, pushUndoSnapshot } from "@/lib/undo-stack";
 import { StickyActionBar } from "@/components/StickyActionBar";
+import { userHasAiApiKey } from "@/lib/has-ai-key";
 
 const SECTION_LABELS: Record<string, string> = {
   summary: "Professional Summary",
@@ -378,8 +379,7 @@ export default function ResumePage() {
       toast.error("Please upload a PDF file");
       return;
     }
-    const isMarc = user?.email === "marcsherwood@gmail.com";
-    if (!isMarc && !userProfile?.aiApiKey) {
+    if (!userHasAiApiKey(user?.email, userProfile)) {
       toast.info("Add an AI API key in Settings to auto-fill sections from a PDF.");
       return;
     }

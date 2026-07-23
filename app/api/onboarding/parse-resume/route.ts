@@ -4,6 +4,8 @@ import { adminDb } from "@/lib/firebase-admin";
 import { extractTextFromPdfBuffer, structureResumeFromText } from "@/lib/parse-resume";
 import { ONBOARDING_MAX_PDF_BYTES } from "@/lib/onboarding";
 import { trackTokenUsage } from "@/lib/cost-tracker";
+import { onboardingServerAiEnabled } from "@/lib/edition";
+import { getOnboardingServerAiError } from "@/lib/platform-ai";
 
 export const runtime = "nodejs";
 
@@ -27,11 +29,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: blocked }, { status: 400 });
   }
 
-  if (!process.env.GOOGLE_AI_API_KEY?.trim()) {
-    return NextResponse.json(
-      { error: "Server AI is not configured. Contact the administrator." },
-      { status: 503 }
-    );
+  if (!onboardingServerAiEnabled()) {
+    return NextResponse.json({ error: getOnboardingServerAiError() }, { status: 503 });
   }
 
   let formData: FormData;

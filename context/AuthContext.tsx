@@ -21,6 +21,8 @@ import {
 import { auth } from "@/lib/firebase";
 import { saveUserProfile, getUserProfile } from "@/lib/db";
 import { AnalyticsEvents, captureEvent, identifyUser, resetUser } from "@/lib/analytics";
+import { accessGateEnabled } from "@/lib/edition";
+import { isAdminEmail } from "@/lib/is-admin";
 
 function serializeError(err: any): string {
   if (!err) return "null";
@@ -290,9 +292,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(timeout);
       if (u) {
         logDiagnostic(`onAuthStateChanged: User is signed in. Email: ${u.email}, UID: ${u.uid}`);
-        // Marc is automatically approved
-        if (u.email === "marcsherwood@gmail.com") {
-          logDiagnostic("User is administrator (Marc). Auto-approving access.");
+        if (!accessGateEnabled()) {
+          logDiagnostic("Open sign-up edition — auto-approving access.");
+          setAccessStatus("approved");
+          setUser(u);
+          syncAnalyticsForUser(u, { status: "approved", isNewRegistration: false });
+          try {
+            await resolveAccessForUser(u);
+          } catch (err) {
+            console.error("[Auth] Error registering open sign-up user:", err);
+          }
+          await ensureUserProfile(u);
+          setLoading(false);
+        } else if (isAdminEmail(u.email)) {
+          logDiagnostic("User is administrator. Auto-approving access.");
           setAccessStatus("approved");
           setUser(u);
           syncAnalyticsForUser(u, { status: "approved", isNewRegistration: false });
@@ -507,7 +520,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshAccessStatus = async () => {
     if (!user) return;
-    if (user.email === "marcsherwood@gmail.com") {
+    if (!accessGateEnabled() || isAdminEmail(user.email)) {
       setAccessStatus("approved");
       return;
     }

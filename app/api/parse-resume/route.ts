@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import type { AIProvider } from "@/lib/ai";
 import { adminAuth } from "@/lib/firebase-admin";
 import { trackTokenUsage } from "@/lib/cost-tracker";
+import { checkUserAiAccess } from "@/lib/platform-ai";
 import { extractTextFromPdfBuffer, structureResumeFromText } from "@/lib/parse-resume";
 
 export const runtime = "nodejs";
@@ -39,15 +40,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const isMarc = userEmail === "marcsherwood@gmail.com";
-  const apiKeyToUse = isMarc ? apiKey || undefined : apiKey;
-
-  if (!isMarc && (!apiKeyToUse || !apiKeyToUse.trim())) {
-    return Response.json(
-      { error: "No AI API key provided. Please configure your own AI key in Settings." },
-      { status: 400 }
-    );
+  const access = checkUserAiAccess({
+    email: userEmail,
+    userApiKey: apiKey,
+    feature: "parse-resume",
+  });
+  if (!access.ok) {
+    return Response.json({ error: access.error }, { status: 400 });
   }
+  const apiKeyToUse = access.apiKey;
 
   let rawText: string;
   try {
