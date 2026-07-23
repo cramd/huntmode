@@ -3,6 +3,11 @@
   "name": "HuntMode — Save to your hunt",
   "description": "Save job postings to HuntMode as drafts or queue them for later.",
   "version": "1.0.0",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "permissions": ["contextMenus", "storage", "activeTab", "tabs"],
   "host_permissions": [
     "https://huntmode.ca/*",
@@ -10,7 +15,13 @@
     "https://fuzzynacho.org/*"
   ],
   "externally_connectable": {
-    "matches": ["https://huntmode.ca/*", "https://fuzzynacho.org/*"]
+    "matches": [
+      "https://huntmode.ca/*",
+      "https://www.huntmode.ca/*",
+      "https://*.huntmode.ca/*",
+      "https://fuzzynacho.org/*",
+      "https://www.fuzzynacho.org/*"
+    ]
   },
   "background": {
     "service_worker": "background.js",
@@ -22,7 +33,13 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://huntmode.ca/*", "https://fuzzynacho.org/*"],
+      "matches": [
+        "https://huntmode.ca/*",
+        "https://www.huntmode.ca/*",
+        "https://*.huntmode.ca/*",
+        "https://fuzzynacho.org/*",
+        "https://www.fuzzynacho.org/*"
+      ],
       "js": ["content/huntmode-bridge.js"],
       "type": "module",
       "run_at": "document_idle"

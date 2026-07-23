@@ -56,6 +56,12 @@ export default function ChangelogPage() {
             About
           </Link>
           <Link
+            href="/privacy"
+            className="text-sm font-medium text-slate-400 transition-colors hover:text-white"
+          >
+            Privacy
+          </Link>
+          <Link
             href="/"
             className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-transparent px-3 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
           >

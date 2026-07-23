@@ -1,4 +1,4 @@
-export const HUNTMODE_BASE = "https://huntmode.ca";
+export const HUNTMODE_BASE = "https://www.huntmode.ca";
 export const QUEUE_STORAGE_KEY = "huntmode:queue";
 export const AUTH_STORAGE_KEY = "huntmode:auth";
 export const DISMISS_SESSION_KEY = "huntmode:extension-import-dismissed";

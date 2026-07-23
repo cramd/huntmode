@@ -223,6 +223,10 @@ export function LoginAuthPanel({
             Blog
           </Link>
           <span className="text-slate-700">·</span>
+          <Link href="/privacy" className="transition-colors hover:text-slate-400">
+            Privacy
+          </Link>
+          <span className="text-slate-700">·</span>
           <a
             href="https://dir.fuzzynacho.org"
             target="_blank"
