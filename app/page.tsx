@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { LoginAuthPanel } from "@/components/landing/LoginAuthPanel";
 import { LandingProductShowcase } from "@/components/landing/LandingProductShowcase";
 import { MobileProductSummary } from "@/components/landing/MobileProductSummary";
+import { ExtensionPromoSection } from "@/components/landing/ExtensionPromoSection";
 import { Button } from "@/components/ui/button";
 
 export default function LandingPage() {
@@ -68,6 +69,8 @@ export default function LandingPage() {
           <MobileProductSummary />
         </div>
       </div>
+
+      <ExtensionPromoSection variant="full" />
 
       {showDebug && authLogs && (
         <section className="relative z-10 mx-auto max-w-3xl px-6 pb-12">

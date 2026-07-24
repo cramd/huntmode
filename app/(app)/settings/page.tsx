@@ -25,6 +25,7 @@ import { AdminSignupStats } from "@/components/AdminSignupStats";
 import { RecentAiUsage } from "@/components/RecentAiUsage";
 import { TipThanksButton } from "@/components/TipThanksButton";
 import { AnalyticsPromptCard } from "@/components/AnalyticsPromptCard";
+import { ExtensionPromoSection } from "@/components/landing/ExtensionPromoSection";
 import { isTippingEnabled } from "@/lib/tipping";
 
 export default function SettingsPage() {
@@ -113,6 +114,8 @@ export default function SettingsPage() {
           Configure your profile, goals, and AI provider.
         </p>
       </div>
+
+      <ExtensionPromoSection variant="compact" />
 
       {isAdmin && (
         <>

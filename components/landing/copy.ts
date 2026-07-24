@@ -109,3 +109,39 @@ export const LOCAL_INSTALL_TITLE = "Run it locally";
 export const LOCAL_INSTALL_BODY =
   "Download and install HuntMode yourself if you want to tweak the code, add features, or keep everything fully private.";
 export const LOCAL_INSTALL_CTA = "View source on GitHub";
+
+/** Chrome Web Store listing for the HuntMode browser extension */
+export const CHROME_EXTENSION_STORE_URL =
+  "https://chromewebstore.google.com/detail/kejpagponmjfjcjljojamacifnbmjmbk";
+
+export const EXTENSION_CTA_LABEL = "Add to Chrome";
+
+export const EXTENSION_CARD_TITLE = "Save jobs from any tab";
+export const EXTENSION_CARD_BODY =
+  "Install the free Chrome extension to queue job postings while you browse, then import them as drafts in HuntMode.";
+
+export const EXTENSION_SECTION_EYEBROW = "Chrome extension";
+export const EXTENSION_SECTION_HEADLINE = "Spot a role? Save it in one click.";
+export const EXTENSION_SECTION_SUBHEAD =
+  "Queue job URLs from LinkedIn, company career pages, or anywhere else — then turn them into draft applications when you open HuntMode.";
+
+export const EXTENSION_COMPACT_HEADLINE = "Save jobs while you browse";
+export const EXTENSION_COMPACT_BODY =
+  "Install the Chrome extension to queue job URLs from any tab. Connect once, then import drafts on HuntMode or add them instantly.";
+
+export const EXTENSION_STEPS = [
+  {
+    title: "Save",
+    description: "Right-click a job page or use the extension popup to add it to your queue.",
+  },
+  {
+    title: "Connect",
+    description: "Sign in to HuntMode once from the extension popup to enable instant adds.",
+  },
+  {
+    title: "Import",
+    description: "Open HuntMode and click Import drafts on the banner — or use Add now from any tab.",
+  },
+] as const;
+
+export const EXTENSION_PRIVACY_NOTE = "See our privacy policy for what the extension stores.";

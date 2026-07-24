@@ -1,12 +1,16 @@
 # HuntMode Chrome Extension
 
-Save job postings to [huntmode.ca](https://huntmode.ca) from any page.
+Save job postings to [huntmode.ca](https://www.huntmode.ca) from any page.
 
-## Install (development)
+## Install
+
+**[Add to Chrome — Chrome Web Store](https://chromewebstore.google.com/detail/kejpagponmjfjcjljojamacifnbmjmbk)**
+
+### Development (load unpacked)
 
 1. Open Chrome → **Extensions** → **Manage Extensions** → enable **Developer mode**
 2. Click **Load unpacked** and select this `extension/` folder
-3. On huntmode.ca, sign in and open **Connect** from the extension popup (or visit `/extension/connect?ext=<your-extension-id>`)
+3. On huntmode.ca, sign in and open **Connect** from the extension popup
 
 ## Usage
 
@@ -16,6 +20,8 @@ Save job postings to [huntmode.ca](https://huntmode.ca) from any page.
 
 ## Permissions
 
-- `huntmode.ca` only (v1)
+- HuntMode domains only (huntmode.ca / fuzzynacho.org)
 - Queue stored locally in `chrome.storage.local`
 - Auth token stored in `chrome.storage.session` after connecting on huntmode.ca
+
+See [Privacy Policy](https://www.huntmode.ca/privacy) for data handling details.

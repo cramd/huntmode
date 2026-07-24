@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { GithubIcon } from "@/components/landing/GithubIcon";
 import { HuntModeBrand } from "@/components/HuntModeBrand";
+import { ExtensionPromoSection } from "@/components/landing/ExtensionPromoSection";
 import { DOCKER_HUB_URL, GITHUB_REPO_URL } from "@/components/landing/copy";
 
 export const metadata: Metadata = {
@@ -110,6 +111,12 @@ export default function AboutPage() {
             Privacy
           </Link>
           <Link
+            href="#extension"
+            className="text-sm font-medium text-slate-400 transition-colors hover:text-white"
+          >
+            Extension
+          </Link>
+          <Link
             href="/"
             className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-transparent px-3 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
           >
@@ -196,6 +203,11 @@ export default function AboutPage() {
             ))}
           </div>
         </section>
+
+        <ExtensionPromoSection
+          variant="full"
+          className="border-t-0 bg-transparent px-0 py-0 sm:px-0 lg:px-0"
+        />
 
         <section className="space-y-10">
           <div className="max-w-xl space-y-3">

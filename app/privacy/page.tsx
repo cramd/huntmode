@@ -107,7 +107,7 @@ export default function PrivacyPage() {
           </p>
         </PolicySection>
 
-        <PolicySection title="Chrome extension">
+        <PolicySection id="extension" title="Chrome extension">
           <p>The HuntMode extension is optional. When installed, it may collect and store:</p>
           <ul className="list-disc space-y-2 pl-5">
             <li>
@@ -211,14 +211,19 @@ export default function PrivacyPage() {
 }
 
 function PolicySection({
+  id,
   title,
   children,
 }: {
+  id?: string;
   title: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded-2xl border border-white/5 bg-slate-900/40 p-5 sm:p-6">
+    <section
+      id={id}
+      className="space-y-3 rounded-2xl border border-white/5 bg-slate-900/40 p-5 sm:p-6"
+    >
       <h2 className="text-lg font-bold text-white">{title}</h2>
       <div className="space-y-3 text-sm leading-relaxed text-slate-400">{children}</div>
     </section>

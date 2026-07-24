@@ -1,8 +1,12 @@
 import {
+  CHROME_EXTENSION_STORE_URL,
+  EXTENSION_CTA_LABEL,
   MOBILE_BULLETS,
   MOBILE_SUMMARY_TITLE,
   MOBILE_TRUST,
 } from "@/components/landing/copy";
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 
 export function MobileProductSummary({ className }: { className?: string }) {
   return (
@@ -22,6 +26,21 @@ export function MobileProductSummary({ className }: { className?: string }) {
         ))}
       </ul>
       <p className="mt-5 text-xs text-slate-500">{MOBILE_TRUST}</p>
+      <Button
+        nativeButton={false}
+        render={
+          <a
+            href={CHROME_EXTENSION_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center"
+          />
+        }
+        className="mt-4 h-11 w-full rounded-xl bg-indigo-600 font-bold text-white hover:bg-indigo-500"
+      >
+        {EXTENSION_CTA_LABEL}
+        <ArrowRight className="ml-2 h-4 w-4" />
+      </Button>
     </section>
   );
 }

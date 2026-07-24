@@ -21,7 +21,9 @@ See [docs/EDITIONS.md](docs/EDITIONS.md) for merge workflow, feature split, and 
 
 ### Chrome extension
 
-The [`extension/`](extension/) folder contains a Manifest V3 browser extension for huntmode.ca. Load it unpacked in Chrome to save job URLs from any page and import them as draft applications. See [extension/README.md](extension/README.md).
+Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/kejpagponmjfjcjljojamacifnbmjmbk) to save job URLs from any page and import them as draft applications. See [extension/README.md](extension/README.md) for usage.
+
+**Development:** load unpacked from the [`extension/`](extension/) folder in Chrome.
 
 ## Features
 

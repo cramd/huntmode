@@ -9,6 +9,7 @@ import {
   FileText,
   Flame,
   Lock,
+  Puzzle,
   Search,
   ShieldAlert,
   Target,
@@ -32,6 +33,10 @@ import {
   PRODUCT_PILLARS,
   SECONDARY_CTA,
   TRUST_LINE,
+  CHROME_EXTENSION_STORE_URL,
+  EXTENSION_CARD_BODY,
+  EXTENSION_CARD_TITLE,
+  EXTENSION_CTA_LABEL,
   type HeadlineVariant,
   type ProductPillarIcon,
 } from "@/components/landing/copy";
@@ -186,6 +191,25 @@ export function LoginAuthPanel({
       </div>
 
       <div className="mx-auto mt-auto w-full max-w-md space-y-4 pt-10">
+        <a
+          href={CHROME_EXTENSION_STORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex gap-3 rounded-xl border border-indigo-500/25 bg-indigo-500/5 px-4 py-3 transition-colors hover:border-indigo-500/40 hover:bg-indigo-500/10"
+        >
+          <Puzzle className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400" />
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-sm font-semibold text-slate-200 group-hover:text-white">
+              {EXTENSION_CARD_TITLE}
+            </p>
+            <p className="text-xs leading-relaxed text-slate-500">{EXTENSION_CARD_BODY}</p>
+            <p className="flex items-center gap-1.5 pt-1 text-xs font-semibold text-indigo-400/90">
+              {EXTENSION_CTA_LABEL}
+              <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+            </p>
+          </div>
+        </a>
+
         <Link
           href={LEARN_MORE_HREF}
           className="group flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 transition-colors hover:border-indigo-500/30 hover:bg-indigo-500/5"
